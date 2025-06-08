@@ -15,8 +15,12 @@
   "observability": {
     "enabled": true,
   },
-  "vars": {
-    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsud2FubmEtY2xvdWRmbGFyZS5jb3JuZWwtYmFuZGxpLndvcmtlcnMuZGV2JA",
+  "env": {
+    "production": {
+      "vars": {
+        "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_...",
+      },
+    },
   },
   /**
    * Smart Placement

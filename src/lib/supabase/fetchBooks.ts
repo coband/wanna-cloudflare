@@ -40,17 +40,25 @@ export interface Book {
 
 // Hauptfunktion zum Abrufen von Büchern
 export async function fetchBooks(params: FetchBooksParams = {}, session?: any) {
-  const {
-    limit = 10,
-    fields = '*',
-    orderBy = { column: 'created_at', ascending: false },
-    filter
-  } = params
-
-  try {
-    const supabase = session 
-      ? createClerkSupabaseClient(session)
-      : createClient()
+    // Auth-Prüfung am Anfang
+    if (!session) {
+      return {
+        success: false,
+        data: [],
+        count: 0,
+        error: 'Keine gültige Session - Anmeldung erforderlich'
+      }
+    }
+  
+    const {
+      limit = 10,
+      fields = '*',
+      orderBy = { column: 'created_at', ascending: false },
+      filter
+    } = params
+  
+    try {
+      const supabase = createClerkSupabaseClient(session)
     
     // Query starten
     let query = supabase

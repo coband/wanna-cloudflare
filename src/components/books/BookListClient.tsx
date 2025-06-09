@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react'
-import { useAuth, useSession, SignInButton } from '@clerk/nextjs'
+import { useUser, useSession, SignInButton } from '@clerk/nextjs'
 import { fetchBooks, Book, FetchBooksParams } from '@/lib/supabase/fetchBooks'
 import BookCard from './BookCard'
 import { Search, Filter, Loader2, BookOpen, AlertCircle, Lock } from 'lucide-react'
@@ -10,7 +10,7 @@ interface BookListClientProps {
 }
 
 export default function BookListClient({ initialLimit = 12 }: BookListClientProps) {
-  const { isSignedIn } = useAuth()
+  const { user, isLoaded } = useUser()
   const { session } = useSession()
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,7 +22,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
   // Bücher laden
   const loadBooks = async () => {
-    if (!isSignedIn) {
+    if (!user) {
       setLoading(false)
       return
     }
@@ -48,7 +48,6 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
       // Suchfilter hinzufügen falls vorhanden
       if (searchTerm.trim()) {
-        // Für die Suche verwenden wir eine einfache ilike-Suche auf title
         params.filter = {
           column: 'title',
           operator: 'ilike',
@@ -70,31 +69,46 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     }
   }
 
-  // Initial load und bei Änderungen neu laden
+  // Initial load und bei Änderungen neu laden - mit isLoaded Check
   useEffect(() => {
-    loadBooks()
-  }, [isSignedIn, limit, sortBy, sortOrder])
-
-  // Suche mit Debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
+    if (isLoaded) { // Nur laden wenn Clerk bereit ist
       loadBooks()
-    }, 500)
+    }
+  }, [isLoaded, user, limit, sortBy, sortOrder])
 
-    return () => clearTimeout(timer)
-  }, [searchTerm])
+  // Suche mit Debounce - mit isLoaded Check
+  useEffect(() => {
+    if (isLoaded && user) { // Nur suchen wenn Clerk bereit und User da
+      const timer = setTimeout(() => {
+        loadBooks()
+      }, 500)
+
+      return () => clearTimeout(timer)
+    }
+  }, [searchTerm, isLoaded, user])
 
   const handleBookClick = (book: Book) => {
     console.log('Buch angeklickt:', book)
-    // Hier können Sie später zur Detailseite navigieren
   }
 
   const handleLoadMore = () => {
     setLimit(prev => prev + 12)
   }
 
-  // Auth Guard - Benutzer muss angemeldet sein
-  if (!isSignedIn) {
+  // Loading State für Clerk (verhindert Flicker!)
+  if (!isLoaded) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="ml-2 text-gray-600">Anwendung wird geladen...</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Auth Guard - nur nach dem Laden prüfen
+  if (!user) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center">

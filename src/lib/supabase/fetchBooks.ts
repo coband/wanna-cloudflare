@@ -1,5 +1,4 @@
-"use client"
-import { createClient, createClerkSupabaseClient } from './browser'
+import { createClerkSupabaseClient } from './browser'
 
 // Interface für die fetchBooks Parameter
 export interface FetchBooksParams {
@@ -141,10 +140,17 @@ export async function fetchBookById(
   fields: string = '*',
   session?: any
 ) {
+  // Auth-Prüfung am Anfang
+  if (!session) {
+    return {
+      success: false,
+      data: null,
+      error: 'Keine gültige Session - Anmeldung erforderlich'
+    }
+  }
+
   try {
-    const supabase = session 
-      ? createClerkSupabaseClient(session)
-      : createClient()
+    const supabase = createClerkSupabaseClient(session)
     
     const { data, error } = await supabase
       .from('books')
@@ -179,10 +185,18 @@ export async function searchBooks(
   limit: number = 20,
   session?: any
 ) {
+  // Auth-Prüfung am Anfang
+  if (!session) {
+    return {
+      success: false,
+      data: [],
+      count: 0,
+      error: 'Keine gültige Session - Anmeldung erforderlich'
+    }
+  }
+
   try {
-    const supabase = session 
-      ? createClerkSupabaseClient(session)
-      : createClient()
+    const supabase = createClerkSupabaseClient(session)
     
     let query = supabase.from('books').select('*')
 

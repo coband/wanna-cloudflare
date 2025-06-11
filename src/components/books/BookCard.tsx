@@ -1,16 +1,52 @@
 "use client"
 import { Book } from '@/lib/supabase/fetchBooks'
-import { Calendar, User, BookOpen, ExternalLink } from 'lucide-react'
+import { deleteBook } from '@/lib/supabase/deleteBook'
+import { Calendar, User, BookOpen, ExternalLink, Trash2 } from 'lucide-react'
+import { useSession, useAuth } from '@clerk/nextjs'
+import { useState } from 'react'
 
 interface BookCardProps {
   book: Book
   onClick?: (book: Book) => void
+  onDelete?: (bookId: string) => void
 }
 
-export default function BookCard({ book, onClick }: BookCardProps) {
+export default function BookCard({ book, onClick, onDelete }: BookCardProps) {
+  const { session } = useSession()
+  const { isLoaded, isSignedIn, sessionClaims } = useAuth()
+  const [isDeleting, setIsDeleting] = useState(false)
+
   const handleClick = () => {
     if (onClick) {
       onClick(book)
+    }
+  }
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    if (!confirm(`Sind Sie sicher, dass Sie "${book.title}" löschen möchten?`)) {
+      return
+    }
+
+    setIsDeleting(true)
+    
+    try {
+      const result = await deleteBook(book.id, session)
+      
+      if (result.success) {
+        console.log('Buch erfolgreich gelöscht')
+        if (onDelete) {
+          onDelete(book.id)
+        }
+      } else {
+        alert(`Fehler beim Löschen: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Fehler beim Löschen:', error)
+      alert('Unerwarteter Fehler beim Löschen des Buchs')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -29,6 +65,13 @@ export default function BookCard({ book, onClick }: BookCardProps) {
     if (!description) return 'Keine Beschreibung verfügbar'
     if (description.length <= maxLength) return description
     return description.substring(0, maxLength) + '...'
+  }
+
+  // Prüfe, ob der Benutzer Admin oder Superadmin ist
+  const canDelete = () => {
+    if (!isLoaded || !isSignedIn) return false
+    const appRole = sessionClaims?.app_role as string | undefined
+    return appRole === 'admin' || appRole === 'superadmin'
   }
 
   return (
@@ -123,22 +166,42 @@ export default function BookCard({ book, onClick }: BookCardProps) {
             ID: {book.id.slice(0, 8)}...
           </div>
           
-          {onClick && (
-            <button 
-              className="
-                inline-flex items-center px-3 py-1 rounded-md text-sm font-medium
-                text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-              "
-              onClick={(e) => {
-                e.stopPropagation()
-                handleClick()
-              }}
-            >
-              Details
-              <ExternalLink className="h-3 w-3 ml-1" />
-            </button>
-          )}
+          <div className="flex gap-2">
+            {/* Delete Button - nur für Admins und Superadmins */}
+            {canDelete() && (
+              <button 
+                className="
+                  inline-flex items-center px-2 py-1 rounded-md text-sm font-medium
+                  text-red-600 bg-red-50 hover:bg-red-100 transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                "
+                onClick={handleDelete}
+                disabled={isDeleting}
+                title="Buch löschen"
+              >
+                <Trash2 className={`h-3 w-3 ${isDeleting ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+
+            {/* Details Button */}
+            {onClick && (
+              <button 
+                className="
+                  inline-flex items-center px-3 py-1 rounded-md text-sm font-medium
+                  text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                "
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleClick()
+                }}
+              >
+                Details
+                <ExternalLink className="h-3 w-3 ml-1" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

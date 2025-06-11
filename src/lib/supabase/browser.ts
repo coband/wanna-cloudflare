@@ -1,4 +1,3 @@
-"use client"
 import { createBrowserClient } from '@supabase/ssr'
 
 // Standard Supabase Browser Client für SSR

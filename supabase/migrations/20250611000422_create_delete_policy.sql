@@ -3,7 +3,7 @@ on "public"."books"
 as permissive
 for delete
 to authenticated
-using (((auth.jwt() ->> 'app_role'::text) = ANY (ARRAY['admin'::text, 'superadmin'::text])));
+using ((((select auth.jwt()) ->> 'app_role'::text) = ANY (ARRAY['admin'::text, 'superadmin'::text])));
 
 
 

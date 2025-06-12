@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import type { SessionResource } from '@clerk/types'
 
 // Standard Supabase Browser Client für SSR
 export const createClient = () =>
@@ -8,7 +9,7 @@ export const createClient = () =>
   )
 
 // Clerk-authentifizierter Supabase Client (native Integration)
-export const createClerkSupabaseClient = (session: any) =>
+export const createClerkSupabaseClient = (session: SessionResource | null | undefined) =>
   createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

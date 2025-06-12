@@ -50,16 +50,6 @@ export default function BookCard({ book, onClick, onDelete }: BookCardProps) {
     }
   }
 
-  // Formatiere das Datum falls vorhanden
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Unbekannt'
-    try {
-      return new Date(dateString).toLocaleDateString('de-DE')
-    } catch {
-      return dateString
-    }
-  }
-
   // Kürze die Beschreibung falls zu lang
   const truncateDescription = (description?: string, maxLength: number = 150) => {
     if (!description) return 'Keine Beschreibung verfügbar'

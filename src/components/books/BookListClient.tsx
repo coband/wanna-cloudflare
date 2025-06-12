@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useUser, useSession, SignInButton } from '@clerk/nextjs'
 import { fetchBooks, Book, FetchBooksParams } from '@/lib/supabase/fetchBooks'
 import BookCard from './BookCard'
@@ -21,7 +21,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   const [limit, setLimit] = useState(initialLimit)
 
   // Bücher laden
-  const loadBooks = async () => {
+  const loadBooks = useCallback(async () => {
     if (!user) {
       setLoading(false)
       return
@@ -67,14 +67,14 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, session, limit, sortBy, sortOrder, searchTerm])
 
   // Initial load und bei Änderungen neu laden - mit isLoaded Check
   useEffect(() => {
     if (isLoaded) { // Nur laden wenn Clerk bereit ist
       loadBooks()
     }
-  }, [isLoaded, user, limit, sortBy, sortOrder])
+  }, [isLoaded, user, limit, sortBy, sortOrder, loadBooks])
 
   // Suche mit Debounce - mit isLoaded Check
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
       return () => clearTimeout(timer)
     }
-  }, [searchTerm, isLoaded, user])
+  }, [searchTerm, isLoaded, user, loadBooks])
 
   const handleBookClick = (book: Book) => {
     console.log('Buch angeklickt:', book)

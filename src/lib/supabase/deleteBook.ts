@@ -1,4 +1,5 @@
 import { createClerkSupabaseClient } from './browser'
+import type { SessionResource } from '@clerk/types'
 
 // Interface für das Löschen eines Buchs
 export interface DeleteBookResult {
@@ -9,7 +10,7 @@ export interface DeleteBookResult {
 // Hauptfunktion zum Löschen eines einzelnen Buchs
 export async function deleteBook(
   bookId: string,
-  session?: any
+  session: SessionResource | null | undefined
 ): Promise<DeleteBookResult> {
   // Auth-Prüfung am Anfang
   if (!session) {

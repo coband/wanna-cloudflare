@@ -69,23 +69,29 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     }
   }, [user, session, limit, sortBy, sortOrder, searchTerm])
 
-  // Initial load und bei Änderungen neu laden - mit isLoaded Check
+  // Initial load und bei Änderungen neu laden - mit isLoaded Check und Debounce
   useEffect(() => {
-    if (isLoaded) { // Nur laden wenn Clerk bereit ist
+    // Nur ausführen, wenn Clerk geladen und ein Benutzer angemeldet ist.
+    if (!isLoaded || !user) {
+      return
+    }
+
+    // Debounce-Logik: Ein Timer wird gesetzt, um `loadBooks` nach 500ms aufzurufen.
+    // Bei jeder neuen Eingabe (Änderung der Abhängigkeiten) wird der alte Timer gelöscht.
+    const timer = setTimeout(() => {
       loadBooks()
-    }
-  }, [isLoaded, user, limit, sortBy, sortOrder, loadBooks])
+    }, 500)
 
-  // Suche mit Debounce - mit isLoaded Check
-  useEffect(() => {
-    if (isLoaded && user) { // Nur suchen wenn Clerk bereit und User da
-      const timer = setTimeout(() => {
-        loadBooks()
-      }, 500)
+    // Aufräumfunktion: löscht den Timer, wenn die Komponente unmountet
+    // oder die Abhängigkeiten sich erneut ändern.
+    return () => clearTimeout(timer)
 
-      return () => clearTimeout(timer)
-    }
-  }, [searchTerm, isLoaded, user, loadBooks])
+    // HINWEIS: `loadBooks` wird absichtlich aus dem Dependency-Array ausgelassen,
+    // um eine Endlosschleife zu verhindern, die durch die Aktualisierung des
+    // Clerk-Session-Objekts verursacht wird. Stattdessen werden die eigentlichen
+    // Abhängigkeiten, die ein Neuladen erfordern, hier direkt deklariert.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit])
 
   const handleBookClick = (book: Book) => {
     console.log('Buch angeklickt:', book)

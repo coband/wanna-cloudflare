@@ -2,14 +2,12 @@ import BookListClient from '@/components/books/BookListClient'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Bücher - Bibliothek',
-  description: 'Entdecken Sie unsere umfangreiche Sammlung von Büchern',
+  title: 'Katalog - Lehrmittelbibliothek',
+  description: 'Durchsuchen Sie unseren umfangreichen Katalog an Lehrmitteln für alle Schulstufen und Fachbereiche',
 }
 
 export default function BooksPage() {
   return (
-    <main className="min-h-screen bg-gray-50">
-      <BookListClient initialLimit={16} />
-    </main>
+    <BookListClient initialLimit={16} />
   )
 } 

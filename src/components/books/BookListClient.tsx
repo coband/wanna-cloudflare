@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUser, useSession, SignInButton } from '@clerk/nextjs'
 import { fetchBooks, Book, FetchBooksParams } from '@/lib/supabase/fetchBooks'
 import BookCard from './BookCard'
-import { Search, Filter, Loader2, BookOpen, AlertCircle, Lock } from 'lucide-react'
+import { Search, Loader2, BookOpen, AlertCircle, Lock, List, Grid3X3, ChevronDown } from 'lucide-react'
 
 interface BookListClientProps {
   initialLimit?: number
@@ -16,9 +16,12 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<'title' | 'author' | 'created_at' | 'year' | 'subject'>('created_at')
+  const [sortBy, setSortBy] = useState<'created_at' | 'title' | 'author' | 'year' | 'subject'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [limit, setLimit] = useState(initialLimit)
+  const [activeTab, setActiveTab] = useState<'titel' | 'autor' | 'fachbereich' | 'schulstufe' | 'erscheinungsjahr'>('titel')
+  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
+  const [filterType, setFilterType] = useState<'alle' | 'bücher' | 'arbeitsblätter' | 'digitale_medien'>('alle')
 
   // Bücher laden
   const loadBooks = useCallback(async () => {
@@ -31,7 +34,6 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
       setLoading(true)
       setError(null)
 
-      // Session für Clerk-Supabase Integration verwenden
       if (!session) {
         setError('Keine gültige Session gefunden')
         return
@@ -46,10 +48,16 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
         }
       }
 
-      // Suchfilter hinzufügen falls vorhanden
+      // Suchfilter basierend auf aktivem Tab
       if (searchTerm.trim()) {
+        const searchColumn = activeTab === 'titel' ? 'title' : 
+                           activeTab === 'autor' ? 'author' :
+                           activeTab === 'fachbereich' ? 'subject' :
+                           activeTab === 'schulstufe' ? 'level' :
+                           'year'
+        
         params.filter = {
-          column: 'title',
+          column: searchColumn,
           operator: 'ilike',
           value: `%${searchTerm.trim()}%`
         }
@@ -67,31 +75,20 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     } finally {
       setLoading(false)
     }
-  }, [user, session, limit, sortBy, sortOrder, searchTerm])
+  }, [user, session, limit, sortBy, sortOrder, searchTerm, activeTab])
 
-  // Initial load und bei Änderungen neu laden - mit isLoaded Check und Debounce
   useEffect(() => {
-    // Nur ausführen, wenn Clerk geladen und ein Benutzer angemeldet ist.
     if (!isLoaded || !user) {
       return
     }
 
-    // Debounce-Logik: Ein Timer wird gesetzt, um `loadBooks` nach 500ms aufzurufen.
-    // Bei jeder neuen Eingabe (Änderung der Abhängigkeiten) wird der alte Timer gelöscht.
     const timer = setTimeout(() => {
       loadBooks()
     }, 500)
 
-    // Aufräumfunktion: löscht den Timer, wenn die Komponente unmountet
-    // oder die Abhängigkeiten sich erneut ändern.
     return () => clearTimeout(timer)
-
-    // HINWEIS: `loadBooks` wird absichtlich aus dem Dependency-Array ausgelassen,
-    // um eine Endlosschleife zu verhindern, die durch die Aktualisierung des
-    // Clerk-Session-Objekts verursacht wird. Stattdessen werden die eigentlichen
-    // Abhängigkeiten, die ein Neuladen erfordern, hier direkt deklariert.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit])
+  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, activeTab])
 
   const handleBookClick = (book: Book) => {
     console.log('Buch angeklickt:', book)
@@ -101,7 +98,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     setLimit(prev => prev + 12)
   }
 
-  // Loading State für Clerk (verhindert Flicker!)
+  // Loading State für Clerk
   if (!isLoaded) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -113,7 +110,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     )
   }
 
-  // Auth Guard - nur nach dem Laden prüfen
+  // Auth Guard
   if (!user) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -126,10 +123,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
             Sie müssen sich anmelden, um Zugriff auf die Bücher-Bibliothek zu erhalten.
           </p>
           <SignInButton mode="modal">
-            <button className="
-              inline-flex items-center px-6 py-3 border border-transparent text-base font-medium
-              rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200
-            ">
+            <button className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200">
               <Lock className="h-4 w-4 mr-2" />
               Jetzt anmelden
             </button>
@@ -140,163 +134,270 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          📚 Bücher Bibliothek
-        </h1>
-        <p className="text-gray-600">
-          Entdecken Sie unsere Sammlung von Büchern
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Katalog</h1>
+          <p className="text-gray-600">
+            Durchsuchen Sie unseren umfangreichen Katalog an Lehrmitteln für alle Schulstufen und Fachbereiche.
+          </p>
+        </div>
 
-      {/* Filter und Suche */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Suchfeld */}
+        {/* Suchleiste */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Nach Büchern suchen..."
+              placeholder="Suchen Sie nach Titel, Autor, Fachbereich oder Schulstufe..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="
-                w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md
-                focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                placeholder-gray-400
-              "
+              className="w-full pl-12 pr-4 py-3 text-lg border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
             />
           </div>
-
-          {/* Sortierung */}
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'title' | 'author' | 'created_at' | 'year' | 'subject')}
-              className="
-                flex-1 border border-gray-300 rounded-md px-3 py-2
-                focus:ring-2 focus:ring-blue-500 focus:border-transparent
-              "
-            >
-              <option value="created_at">Datum hinzugefügt</option>
-              <option value="title">Titel</option>
-              <option value="author">Autor</option>
-              <option value="year">Jahr</option>
-              <option value="subject">Fach</option>
-            </select>
-          </div>
-
-          {/* Sortierreihenfolge */}
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-            className="
-              border border-gray-300 rounded-md px-3 py-2
-              focus:ring-2 focus:ring-blue-500 focus:border-transparent
-            "
-          >
-            <option value="desc">Neueste zuerst</option>
-            <option value="asc">Älteste zuerst</option>
-          </select>
         </div>
-      </div>
 
-      {/* Loading State */}
-      {loading && books.length === 0 && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <span className="ml-2 text-gray-600">Bücher werden geladen...</span>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-          <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-            <span className="text-red-800">Fehler: {error}</span>
-          </div>
-          <button
-            onClick={loadBooks}
-            className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
-          >
-            Erneut versuchen
-          </button>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && !error && books.length === 0 && (
-        <div className="text-center py-12">
-          <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Keine Bücher gefunden
-          </h3>
-          <p className="text-gray-600 mb-4">
-            {searchTerm 
-              ? `Keine Bücher entsprechen Ihrer Suche nach "${searchTerm}"`
-              : 'Es wurden noch keine Bücher hinzugefügt.'
-            }
-          </p>
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="text-blue-600 hover:text-blue-800 underline"
-            >
-              Suche zurücksetzen
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Books Grid */}
-      {!loading && books.length > 0 && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-            {books.map((book) => (
-              <BookCard
-                key={book.id}
-                book={book}
-                onClick={handleBookClick}
-              />
+        {/* Filter-Tabs */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="flex border-b border-gray-200">
+            {[
+              { key: 'titel', label: 'Titel' },
+              { key: 'autor', label: 'Autor' },
+              { key: 'fachbereich', label: 'Fachbereich' },
+              { key: 'schulstufe', label: 'Schulstufe' },
+              { key: 'erscheinungsjahr', label: 'Erscheinungsjahr' }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as typeof activeTab)}
+                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.key
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {tab.label}
+              </button>
             ))}
           </div>
+        </div>
 
-          {/* Load More Button */}
-          <div className="text-center">
+        {/* Suchergebnisse Header */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Suchergebnisse</h2>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">Sortieren nach:</span>
+              <div className="relative">
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [field, order] = e.target.value.split('-')
+                    setSortBy(field as typeof sortBy)
+                    setSortOrder(order as 'asc' | 'desc')
+                  }}
+                  className="appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="created_at-desc">Relevanz</option>
+                  <option value="title-asc">Titel A-Z</option>
+                  <option value="title-desc">Titel Z-A</option>
+                  <option value="author-asc">Autor A-Z</option>
+                  <option value="year-desc">Neueste zuerst</option>
+                  <option value="year-asc">Älteste zuerst</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* Filter-Buttons */}
+          <div className="flex space-x-1 mb-4">
+            {[
+              { key: 'alle', label: 'Alle Ergebnisse' },
+              { key: 'bücher', label: 'Bücher' },
+              { key: 'arbeitsblätter', label: 'Arbeitsblätter' },
+              { key: 'digitale_medien', label: 'Digitale Medien' }
+            ].map((filter) => (
+              <button
+                key={filter.key}
+                onClick={() => setFilterType(filter.key as typeof filterType)}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  filterType === filter.key
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Listenansicht Header */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-gray-900">Listenansicht</h3>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'cards'
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {loading && books.length === 0 && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Bücher werden geladen...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+              <span className="text-red-800">Fehler: {error}</span>
+            </div>
             <button
-              onClick={handleLoadMore}
-              disabled={loading}
-              className="
-                inline-flex items-center px-6 py-3 border border-transparent text-base font-medium
-                rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50
-                disabled:cursor-not-allowed transition-colors duration-200
-              "
+              onClick={loadBooks}
+              className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Wird geladen...
-                </>
-              ) : (
-                'Mehr Bücher laden'
-              )}
+              Erneut versuchen
             </button>
           </div>
-        </>
-      )}
-
-      {/* Info */}
-      <div className="mt-8 text-center text-sm text-gray-500">
-        {books.length > 0 && (
-          <p>
-            {books.length} Bücher angezeigt
-            {searchTerm && ` für "${searchTerm}"`}
-          </p>
         )}
+
+        {/* Empty State */}
+        {!loading && !error && books.length === 0 && (
+          <div className="text-center py-12">
+            <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Keine Bücher gefunden
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {searchTerm 
+                ? `Keine Bücher entsprechen Ihrer Suche nach "${searchTerm}"`
+                : 'Es wurden noch keine Bücher hinzugefügt.'
+              }
+            </p>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                Suche zurücksetzen
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Books Display */}
+        {!loading && books.length > 0 && (
+          <>
+            {viewMode === 'list' ? (
+              // Listen-Ansicht
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+                <div className="divide-y divide-gray-200">
+                  {books.map((book) => (
+                    <div key={book.id} className="p-6 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-16 h-20 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
+                          <BookOpen className="h-6 w-6 text-gray-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <div className="text-xs text-gray-500 mb-1">{book.subject} • {book.level}</div>
+                              <h3 className="text-lg font-semibold text-gray-900 mb-1 hover:text-blue-600 cursor-pointer">
+                                {book.title || 'Unbekannter Titel'}
+                              </h3>
+                              <p className="text-sm text-gray-600">{book.author || 'Unbekannter Autor'}</p>
+                            </div>
+                            {book.available && (
+                              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                                Verfügbar
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-700 mb-3 line-clamp-2">
+                            {book.description || 'Keine Beschreibung verfügbar'}
+                          </p>
+                          <div className="flex justify-between items-center">
+                            <div className="text-xs text-gray-500">
+                              Erscheinungsjahr: {book.year || 'Unbekannt'}
+                            </div>
+                            <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                              Details →
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              // Karten-Ansicht
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                {books.map((book) => (
+                  <BookCard
+                    key={book.id}
+                    book={book}
+                    onClick={handleBookClick}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Load More Button */}
+            <div className="text-center">
+              <button
+                onClick={handleLoadMore}
+                disabled={loading}
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Wird geladen...
+                  </>
+                ) : (
+                  'Mehr Bücher laden'
+                )}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Info */}
+        <div className="mt-8 text-center text-sm text-gray-500">
+          {books.length > 0 && (
+            <p>
+              {books.length} Bücher angezeigt
+              {searchTerm && ` für "${searchTerm}"`}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

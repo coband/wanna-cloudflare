@@ -1,0 +1,23 @@
+---
+description: Next.js App Router patterns
+globs:
+  - "src/app/**/*.tsx"
+autoAttach: true
+---
+
+# Next.js App Router
+
+## Components
+- Server Components default, Client mit `"use client"`
+- Async Server Components für data fetching
+- Props typisiert
+
+## Files
+- `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx`
+
+## Server Actions
+- `"use server"`, strukturierte Results `{ success, data?, error? }`
+
+## Data Fetching
+- Server: initial data, Client: interactive/real-time
+- Korrekte Supabase clients verwenden

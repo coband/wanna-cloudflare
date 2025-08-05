@@ -1,0 +1,24 @@
+---
+description: TypeScript patterns
+globs:
+  - "*.ts"
+  - "*.tsx"
+alwaysApply: true
+---
+
+# TypeScript Style
+
+## Types
+- `strict` mode, kein `any`, explizite Return-Types
+- PascalCase: Types/Interfaces/Components, camelCase: vars/functions
+- `!` nur für garantierte Env Variables
+
+## Imports
+- `@/` prefix, gruppiert: external → Next.js → internal
+- Named imports bevorzugt
+
+## Supabase
+- `supabase gen types`, typisierte queries, Database<'public'> type
+
+## Error Handling
+- Explizite Error types, strukturierte Results

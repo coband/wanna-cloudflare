@@ -1,0 +1,49 @@
+---
+description: Cloudflare Architecture - created with npm create cloudflare@latest
+globs:
+  - "wrangler.jsonc"
+  - "next.config.ts"
+  - "open-next.config.ts"
+  - "package.json"
+alwaysApply: true
+---
+
+# 🔒 Cloudflare Architecture (NICHT ÄNDERN!)
+
+CRITICAL: Erstellt mit `npm create cloudflare@latest` - perfekte Konfiguration!
+
+## Core Config (PERFEKT)
+```typescript
+// next.config.ts - NICHT ÄNDERN!
+import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
+initOpenNextCloudflareForDev();
+
+// open-next.config.ts - NICHT ÄNDERN!
+export default defineCloudflareConfig({
+  // incrementalCache: r2IncrementalCache, // Optional
+});
+```
+
+## Scripts (BEIBEHALTEN)
+```json
+"build:cloudflare": "opennextjs-cloudflare build"
+"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
+"cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
+```
+
+## Wrangler Config (CRITICAL)
+```jsonc
+{
+  "main": ".open-next/worker.js",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "binding": "ASSETS", "directory": ".open-next/assets" }
+}
+```
+
+## Edge Compatibility
+- ✅ Web APIs: fetch, Headers, Response, URL, Crypto
+- ❌ Node.js APIs: fs, process, Buffer (use nodejs_compat flag)
+- Use Web Standards, dynamic imports for heavy modules
+
+🚫 VERBOTEN: OpenNext config, Wrangler flags, build scripts, env structure ändern

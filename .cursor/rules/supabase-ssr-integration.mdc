@@ -1,0 +1,51 @@
+---
+description: Supabase SSR implementation - NEVER CHANGE
+globs:
+  - "src/lib/supabase/**/*.ts"
+alwaysApply: true
+---
+
+# 🔒 Supabase SSR Integration (NIEMALS ÄNDERN!)
+
+CRITICAL: Folgt offizieller Dokumentation: https://supabase.com/docs/guides/auth/server-side/nextjs
+
+## Browser Client (PERFEKT)
+```typescript
+// Standard Client - NICHT ÄNDERN!
+export const createClient = () => createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// Clerk Integration - NICHT ÄNDERN!
+export const createClerkSupabaseClient = (session: SessionResource | null | undefined) =>
+  createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { accessToken: async () => session?.getToken() ?? null }
+  )
+```
+
+## Server Client (PERFEKT)
+```typescript
+// Standard Server Client - NICHT ÄNDERN!
+export async function createClient() {
+  const cookieStore = await cookies()
+  return createServerClient(url, key, { cookies: { getAll/setAll } })
+}
+
+// Clerk Server Client - NICHT ÄNDERN!
+export async function createClerkServerSupabaseClient() {
+  const { getToken } = await auth()
+  return createServerClient(url, key, {
+    accessToken: async () => getToken() ?? null,
+    cookies: { getAll() { return [] }, setAll() {} }
+  })
+}
+```
+
+## Usage
+- Client: `createClient()` oder `createClerkSupabaseClient(session)`
+- Server: `createClient()` oder `createClerkServerSupabaseClient()`
+
+🚫 VERBOTEN: Client creation logic, cookie handling, env vars, import paths ändern

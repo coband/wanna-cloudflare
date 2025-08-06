@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUser, useSession, SignInButton } from '@clerk/nextjs'
 import { fetchBooks, Book, FetchBooksParams } from '@/lib/supabase/fetchBooks'
 import BookCard from './BookCard'
+import BookListItem from './BookListItem'
+import BookDetails from './BookDetails'
 import { Search, Loader2, BookOpen, AlertCircle, Lock, List, Grid3X3, ChevronDown } from 'lucide-react'
 
 interface BookListClientProps {
@@ -22,6 +24,8 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   const [activeTab, setActiveTab] = useState<'titel' | 'autor' | 'fachbereich' | 'schulstufe' | 'erscheinungsjahr'>('titel')
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
   const [filterType, setFilterType] = useState<'alle' | 'bücher' | 'arbeitsblätter' | 'digitale_medien'>('alle')
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   // Bücher laden
   const loadBooks = useCallback(async () => {
@@ -91,11 +95,21 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, activeTab])
 
   const handleBookClick = (book: Book) => {
-    console.log('Buch angeklickt:', book)
+    setSelectedBook(book)
+    setIsDetailsOpen(true)
+  }
+
+  const handleBookDelete = (bookId: string) => {
+    setBooks(prevBooks => prevBooks.filter(book => book.id !== bookId))
   }
 
   const handleLoadMore = () => {
     setLimit(prev => prev + 12)
+  }
+
+  const handleCloseDetails = () => {
+    setIsDetailsOpen(false)
+    setSelectedBook(null)
   }
 
   // Loading State für Clerk
@@ -319,40 +333,12 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
                 <div className="divide-y divide-gray-200">
                   {books.map((book) => (
-                    <div key={book.id} className="p-6 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start space-x-4">
-                        <div className="w-16 h-20 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                          <BookOpen className="h-6 w-6 text-gray-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <div className="text-xs text-gray-500 mb-1">{book.subject} • {book.level}</div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-1 hover:text-blue-600 cursor-pointer">
-                                {book.title || 'Unbekannter Titel'}
-                              </h3>
-                              <p className="text-sm text-gray-600">{book.author || 'Unbekannter Autor'}</p>
-                            </div>
-                            {book.available && (
-                              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                                Verfügbar
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-700 mb-3 line-clamp-2">
-                            {book.description || 'Keine Beschreibung verfügbar'}
-                          </p>
-                          <div className="flex justify-between items-center">
-                            <div className="text-xs text-gray-500">
-                              Erscheinungsjahr: {book.year || 'Unbekannt'}
-                            </div>
-                            <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                              Details →
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <BookListItem
+                      key={book.id}
+                      book={book}
+                      onClick={handleBookClick}
+                      onDelete={handleBookDelete}
+                    />
                   ))}
                 </div>
               </div>
@@ -364,6 +350,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
                     key={book.id}
                     book={book}
                     onClick={handleBookClick}
+                    onDelete={handleBookDelete}
                   />
                 ))}
               </div>
@@ -399,6 +386,16 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
           )}
         </div>
       </div>
+
+      {/* Book Details Modal */}
+      {selectedBook && (
+        <BookDetails
+          book={selectedBook}
+          isOpen={isDetailsOpen}
+          onClose={handleCloseDetails}
+          onDelete={handleBookDelete}
+        />
+      )}
     </div>
   )
 }

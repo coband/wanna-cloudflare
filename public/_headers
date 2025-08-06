@@ -1,3 +1,43 @@
 # https://developers.cloudflare.com/workers/static-assets/headers
+
+# Static assets caching
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
+  X-Content-Type-Options: nosniff
+
+# Main application - Maximum security
+/*
+  # Security headers
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex, nocache
+  
+  # Content Security Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://*.clerk.accounts.dev https://clerk.*.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.clerk.accounts.dev wss://*.clerk.accounts.dev; frame-ancestors 'none';
+  
+  # Additional security
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), fullscreen=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  
+  # Anti-bot headers
+  Cache-Control: no-cache, no-store, must-revalidate, private
+  Pragma: no-cache
+  Expires: 0
+  
+  # Custom anti-bot markers
+  X-Bot-Protection: enabled
+  X-Scan-Detection: active
+
+# Specific bot-targeted endpoints
+/robots.txt
+  Cache-Control: public, max-age=86400
+  X-Robots-Tag: noindex, nofollow
+
+# API routes - extra protection
+/api/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Bot-Protection: strict

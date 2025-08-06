@@ -1,0 +1,52 @@
+---
+description: Clerk Native Integration - NEVER CHANGE
+globs:
+  - "src/lib/supabase/**/*.ts"
+  - "src/middleware.ts"
+alwaysApply: true
+---
+
+# 🔒 Clerk Integration (NIEMALS ÄNDERN!)
+
+CRITICAL: Native Integration (empfohlen seit April 2025): https://clerk.com/docs/integrations/databases/supabase
+
+## Clerk-Supabase Clients (PERFEKT)
+```typescript
+// Client-side - NICHT ÄNDERN!
+export const createClerkSupabaseClient = (session: SessionResource | null | undefined) =>
+  createBrowserClient(url, key, {
+    accessToken: async () => session?.getToken() ?? null
+  })
+
+// Server-side - NICHT ÄNDERN!
+export async function createClerkServerSupabaseClient() {
+  const { getToken } = await auth()
+  return createServerClient(url, key, {
+    accessToken: async () => getToken() ?? null,
+    cookies: { getAll() { return [] }, setAll() {} }
+  })
+}
+```
+
+## Middleware (PERFEKT)
+```typescript
+// src/middleware.ts - NICHT ÄNDERN!
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+
+const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/'])
+
+export default clerkMiddleware(async (auth, req) => {
+  if (!isPublicRoute(req)) {
+    await auth.protect()
+  }
+})
+```
+
+## Usage
+- Client: `const { session } = useSession(); createClerkSupabaseClient(session)`
+- Server: `createClerkServerSupabaseClient()`
+- RLS: `auth.jwt()->>'sub'` für user_id
+
+## Benefits: No JWT Template, Auto token refresh, Native RLS
+
+🚫 VERBOTEN: accessToken function, JWT Template, manual token handling ändern

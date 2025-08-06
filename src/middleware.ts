@@ -151,7 +151,6 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Block requests with suspicious headers
   const referer = req.headers.get('referer') || ''
-  const acceptLanguage = req.headers.get('accept-language') || ''
   
   if (referer && (referer.includes('scanner') || referer.includes('bot'))) {
     console.log(`🚫 Suspicious referer blocked: ${referer} from ${ip}`)

@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useCallback } from 'react'
-import { useUser, useSession, SignInButton, useAuth } from '@clerk/nextjs'
+import { useUser, useSession, SignInButton } from '@clerk/nextjs'
 import { fetchBooks, Book, FetchBooksParams } from '@/lib/supabase/fetchBooks'
 import BookCard from './BookCard'
 import BookListItem from './BookListItem'

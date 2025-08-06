@@ -15,12 +15,6 @@
   "observability": {
     "enabled": true,
   },
-  "limits": {
-    "cpu_ms": 30000
-  },
-  "triggers": {
-    "crons": []
-  },
   "env": {
     "production": {
       "vars": {

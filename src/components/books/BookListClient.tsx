@@ -1,11 +1,12 @@
 "use client"
 import { useState, useEffect, useCallback } from 'react'
-import { useUser, useSession, SignInButton } from '@clerk/nextjs'
+import { useUser, useSession, SignInButton, useAuth } from '@clerk/nextjs'
 import { fetchBooks, Book, FetchBooksParams } from '@/lib/supabase/fetchBooks'
 import BookCard from './BookCard'
 import BookListItem from './BookListItem'
 import BookDetails from './BookDetails'
-import { Search, Loader2, BookOpen, AlertCircle, Lock, List, Grid3X3, ChevronDown } from 'lucide-react'
+import AddBookModal from './AddBookModal'
+import { Search, Loader2, BookOpen, AlertCircle, Lock, List, Grid3X3, ChevronDown, Plus } from 'lucide-react'
 
 interface BookListClientProps {
   initialLimit?: number
@@ -14,6 +15,7 @@ interface BookListClientProps {
 export default function BookListClient({ initialLimit = 12 }: BookListClientProps) {
   const { user, isLoaded } = useUser()
   const { session } = useSession()
+  const { isSignedIn, sessionClaims } = useAuth()
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +28,10 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   const [filterType, setFilterType] = useState<'alle' | 'bücher' | 'arbeitsblätter' | 'digitale_medien'>('alle')
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null)
+  const appRole = sessionClaims?.app_role as string | undefined
+  const canManageBooks = isSignedIn && (appRole === 'admin' || appRole === 'superadmin')
 
   // Bücher laden
   const loadBooks = useCallback(async () => {
@@ -94,6 +100,15 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, activeTab])
 
+  useEffect(() => {
+    if (!feedbackMessage) {
+      return
+    }
+
+    const timer = setTimeout(() => setFeedbackMessage(null), 5000)
+    return () => clearTimeout(timer)
+  }, [feedbackMessage])
+
   const handleBookClick = (book: Book) => {
     setSelectedBook(book)
     setIsDetailsOpen(true)
@@ -101,6 +116,11 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
   const handleBookDelete = (bookId: string) => {
     setBooks(prevBooks => prevBooks.filter(book => book.id !== bookId))
+  }
+
+  const handleBookCreated = (book: Book) => {
+    setFeedbackMessage(`"${book.title}" wurde erfolgreich hinzugefügt.`)
+    void loadBooks()
   }
 
   const handleLoadMore = () => {
@@ -151,12 +171,29 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Katalog</h1>
-          <p className="text-gray-600">
-            Durchsuchen Sie unseren umfangreichen Katalog an Lehrmitteln für alle Schulstufen und Fachbereiche.
-          </p>
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Katalog</h1>
+            <p className="text-gray-600">
+              Durchsuchen Sie unseren umfangreichen Katalog an Lehrmitteln für alle Schulstufen und Fachbereiche.
+            </p>
+          </div>
+          {canManageBooks && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Buch hinzufügen
+            </button>
+          )}
         </div>
+
+        {feedbackMessage && (
+          <div className="mb-6 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+            {feedbackMessage}
+          </div>
+        )}
 
         {/* Suchleiste */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -386,6 +423,13 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
           )}
         </div>
       </div>
+
+      <AddBookModal
+        isOpen={isAddModalOpen}
+        session={session}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={handleBookCreated}
+      />
 
       {/* Book Details Modal */}
       {selectedBook && (

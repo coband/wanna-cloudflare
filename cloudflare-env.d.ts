@@ -4,6 +4,7 @@
 declare namespace Cloudflare {
 	interface Env {
 		NEXTJS_ENV: string;
+		GOOGLE_GEMINI_API_KEY: string;
 		ASSETS: Fetcher;
 	}
 }

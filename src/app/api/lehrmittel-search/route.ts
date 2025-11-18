@@ -25,19 +25,19 @@ export async function POST(request: NextRequest) {
     }
 
     // The project name "snowy-hat-052d" comes from the user's request
-    // @ts-ignore - AI type is 'any' currently
+    // @ts-expect-error - AI type is 'any' currently
     const answer = await env.AI.autorag("snowy-hat-052d").aiSearch({
       query: query,
     });
 
     return NextResponse.json({ success: true, data: answer });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Search error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An error occurred during search';
     return NextResponse.json(
-      { error: error.message || 'An error occurred during search' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
 }
-

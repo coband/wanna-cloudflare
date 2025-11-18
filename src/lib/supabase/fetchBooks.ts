@@ -119,7 +119,8 @@ export async function fetchBooks(
     }
 
     // Helper function to apply filters to the query
-    function applyFilter(q: any, column: string, operator: string, value: any) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    function applyFilter(q: any, column: string, operator: string, value: string | number | string[] | number[]) {
       switch (operator) {
         case "eq":
           if (typeof value === "string" || typeof value === "number") {

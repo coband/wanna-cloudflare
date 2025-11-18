@@ -45,8 +45,8 @@ export default function LehrmittelSearchPage() {
       }
 
       setResult(data.data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }

@@ -3,7 +3,6 @@ import {
   ClerkProvider,
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import "./globals.css";
 

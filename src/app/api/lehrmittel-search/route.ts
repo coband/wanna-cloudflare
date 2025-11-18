@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
     }
 
     // The project name "snowy-hat-052d" comes from the user's request
-    // @ts-expect-error - AI type is 'any' currently
     const answer = await env.AI.autorag("snowy-hat-052d").aiSearch({
       query: query,
     });

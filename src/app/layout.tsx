@@ -73,6 +73,12 @@ export default function RootLayout({
                     >
                       Neuerscheinungen
                     </Link>
+                    <Link 
+                      href="/lehrmittel/search" 
+                      className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
+                    >
+                      Lehrmittel finden
+                    </Link>
                   </nav>
 
                   {/* User Actions */}

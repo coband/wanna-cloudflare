@@ -6,11 +6,23 @@ import BookCard from './BookCard'
 import BookListItem from './BookListItem'
 import BookDetails from './BookDetails'
 import AddBookModal from './AddBookModal'
-import { Search, Loader2, BookOpen, AlertCircle, Lock, List, Grid3X3, ChevronDown, Plus } from 'lucide-react'
+import { Search, Loader2, BookOpen, AlertCircle, Lock, List, Grid3X3, ChevronDown, Plus, Filter } from 'lucide-react'
 
 interface BookListClientProps {
   initialLimit?: number
 }
+
+const SUBJECTS = [
+  'Mathematik', 'Deutsch', 'Englisch', 'Französisch', 
+  'Natur & Technik', 'Geschichte', 'Geografie', 'Musik', 
+  'Bildnerisches Gestalten', 'Sport', 'Religion/Ethik', 'Informatik'
+]
+
+const LEVELS = [
+  'Kindergarten', '1. Klasse', '2. Klasse', '3. Klasse', 
+  '4. Klasse', '5. Klasse', '6. Klasse', 
+  'Sekundarstufe I', 'Sekundarstufe II', 'Erwachsenenbildung'
+]
 
 export default function BookListClient({ initialLimit = 12 }: BookListClientProps) {
   const { user, isLoaded } = useUser()
@@ -23,9 +35,12 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   const [sortBy, setSortBy] = useState<'created_at' | 'title' | 'author' | 'year' | 'subject'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [limit, setLimit] = useState(initialLimit)
-  const [activeTab, setActiveTab] = useState<'titel' | 'autor' | 'fachbereich' | 'schulstufe' | 'erscheinungsjahr'>('titel')
+  // const [activeTab, setActiveTab] = useState<'titel' | 'autor' | 'fachbereich' | 'schulstufe' | 'erscheinungsjahr'>('titel') // Removed activeTab
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
   const [filterType, setFilterType] = useState<'alle' | 'bücher' | 'arbeitsblätter' | 'digitale_medien'>('alle')
+  const [selectedSubject, setSelectedSubject] = useState<string>('')
+  const [selectedLevel, setSelectedLevel] = useState<string>('')
+  
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -55,22 +70,34 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
         orderBy: {
           column: sortBy,
           ascending: sortOrder === 'asc'
+        },
+        filters: []
+      }
+
+      // Global Search
+      if (searchTerm.trim()) {
+        params.search = {
+          term: searchTerm.trim(),
+          columns: ['title', 'author', 'isbn', 'subject', 'level']
         }
       }
 
-      // Suchfilter basierend auf aktivem Tab
-      if (searchTerm.trim()) {
-        const searchColumn = activeTab === 'titel' ? 'title' : 
-                           activeTab === 'autor' ? 'author' :
-                           activeTab === 'fachbereich' ? 'subject' :
-                           activeTab === 'schulstufe' ? 'level' :
-                           'year'
-        
-        params.filter = {
-          column: searchColumn,
+      // Fachbereich Filter
+      if (selectedSubject) {
+        params.filters?.push({
+          column: 'subject',
+          operator: 'ilike', // ilike für case-insensitive partial match, falls "Mathematik (Algebra)"
+          value: `%${selectedSubject}%`
+        })
+      }
+
+      // Schulstufe Filter
+      if (selectedLevel) {
+        params.filters?.push({
+          column: 'level',
           operator: 'ilike',
-          value: `%${searchTerm.trim()}%`
-        }
+          value: `%${selectedLevel}%`
+        })
       }
 
       const result = await fetchBooks(params, session)
@@ -85,7 +112,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     } finally {
       setLoading(false)
     }
-  }, [user, session, limit, sortBy, sortOrder, searchTerm, activeTab])
+  }, [user, session, limit, sortBy, sortOrder, searchTerm, selectedSubject, selectedLevel])
 
   useEffect(() => {
     if (!isLoaded || !user) {
@@ -98,7 +125,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, activeTab])
+  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, selectedSubject, selectedLevel])
 
   useEffect(() => {
     if (!feedbackMessage) {
@@ -195,44 +222,69 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
           </div>
         )}
 
-        {/* Suchleiste */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        {/* Suchleiste und Filter */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 space-y-4">
           <div className="relative">
             <Search className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Suchen Sie nach Titel, Autor, Fachbereich oder Schulstufe..."
+              placeholder="Suchen Sie nach Titel, Autor, ISBN, Fachbereich..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 text-lg border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
             />
           </div>
-        </div>
 
-        {/* Filter-Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="flex border-b border-gray-200">
-            {[
-              { key: 'titel', label: 'Titel' },
-              { key: 'autor', label: 'Autor' },
-              { key: 'fachbereich', label: 'Fachbereich' },
-              { key: 'schulstufe', label: 'Schulstufe' },
-              { key: 'erscheinungsjahr', label: 'Erscheinungsjahr' }
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.key
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+          {/* Zusätzliche Filter */}
+          <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Filtern nach:</span>
+            </div>
+            
+            <div className="relative min-w-[200px]">
+              <select
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="w-full appearance-none bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                {tab.label}
+                <option value="">Alle Fachbereiche</option>
+                {SUBJECTS.map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            <div className="relative min-w-[200px]">
+              <select
+                value={selectedLevel}
+                onChange={(e) => setSelectedLevel(e.target.value)}
+                className="w-full appearance-none bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Alle Schulstufen</option>
+                {LEVELS.map(level => (
+                  <option key={level} value={level}>{level}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            {(selectedSubject || selectedLevel) && (
+              <button
+                onClick={() => {
+                  setSelectedSubject('')
+                  setSelectedLevel('')
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Filter zurücksetzen
               </button>
-            ))}
+            )}
           </div>
         </div>
+
+
 
         {/* Suchergebnisse Header */}
         <div className="mb-6">
@@ -263,7 +315,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
           </div>
 
           {/* Filter-Buttons */}
-          <div className="flex space-x-1 mb-4">
+          <div className="flex space-x-1 mb-4 overflow-x-auto pb-2">
             {[
               { key: 'alle', label: 'Alle Ergebnisse' },
               { key: 'bücher', label: 'Bücher' },
@@ -273,7 +325,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
               <button
                 key={filter.key}
                 onClick={() => setFilterType(filter.key as typeof filterType)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
                   filterType === filter.key
                     ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -346,17 +398,21 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
               Keine Bücher gefunden
             </h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm 
-                ? `Keine Bücher entsprechen Ihrer Suche nach "${searchTerm}"`
+              {searchTerm || selectedSubject || selectedLevel
+                ? 'Keine Bücher entsprechen Ihren Suchkriterien.'
                 : 'Es wurden noch keine Bücher hinzugefügt.'
               }
             </p>
-            {searchTerm && (
+            {(searchTerm || selectedSubject || selectedLevel) && (
               <button
-                onClick={() => setSearchTerm('')}
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedSubject('')
+                  setSelectedLevel('')
+                }}
                 className="text-blue-600 hover:text-blue-800 underline"
               >
-                Suche zurücksetzen
+                Filter zurücksetzen
               </button>
             )}
           </div>
@@ -418,7 +474,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
           {books.length > 0 && (
             <p>
               {books.length} Bücher angezeigt
-              {searchTerm && ` für "${searchTerm}"`}
+              {(searchTerm || selectedSubject || selectedLevel) && ' (gefiltert)'}
             </p>
           )}
         </div>

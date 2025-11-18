@@ -28,8 +28,6 @@ type BookData = NonNullable<BookLookupResponse['data']>
 
 const MAX_GEMINI_ATTEMPTS = 2
 
-export const runtime = 'edge'
-
 export async function POST(request: NextRequest): Promise<NextResponse<BookLookupResponse>> {
   try {
     // Rate Limiting: Schützt vor Missbrauch

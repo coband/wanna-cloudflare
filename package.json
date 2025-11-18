@@ -14,12 +14,13 @@
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^6.21.0",
-		"@google/genai": "^1.29.1",
+		"@google/genai": "^1.30.0",
 		"@opennextjs/cloudflare": "^1.2.0",
 		"@supabase/ssr": "^0.6.1",
 		"@supabase/supabase-js": "^2.50.0",
 		"@zxing/library": "^0.21.3",
 		"lucide-react": "^0.513.0",
+		"mime": "^4.1.0",
 		"next": "15.3.3",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0"

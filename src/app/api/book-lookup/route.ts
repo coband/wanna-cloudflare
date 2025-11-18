@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenAI } from '@google/genai'
+import { GoogleGenAI, ThinkingLevel } from '@google/genai'
 import { checkRateLimit } from './middleware'
 
 // Response interface matching our Book schema
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BookLooku
       apiKey: apiKey,
     })
 
-    const model = 'gemini-flash-latest'
+    const model = 'gemini-3-pro-preview'
 
     // Optimierter Prompt: Explizit die Nutzung der Suchergebnisse fordern
     const prompt = `Suche mit Google nach der ISBN ${isbn} und VERWENDE DIE GEFUNDENEN INFORMATIONEN um das folgende JSON auszufüllen.
@@ -138,6 +138,9 @@ Gib NUR das ausgefüllte JSON zurück!`
       topP: 0.9,
       topK: 32,
       maxOutputTokens: 2048, // Erhöht für vollständige JSON-Antworten
+      thinkingConfig: {
+        thinkingLevel: ThinkingLevel.LOW,
+      },
       tools: [{ googleSearch: {} }],
     }
 
@@ -149,26 +152,23 @@ Gib NUR das ausgefüllte JSON zurück!`
       console.log(`[Book Lookup] Gemini attempt ${attempt}/${MAX_GEMINI_ATTEMPTS} for ISBN: ${isbn}`)
 
       // Generate content using the new API with Google Search
-      const response = await ai.models.generateContent({
+      const response = await ai.models.generateContentStream({
         model,
         config,
         contents,
       })
 
-      // Logging der Grounding-Metadaten für Debugging
-      if (response?.candidates?.[0]?.groundingMetadata) {
-        const metadata = response.candidates[0].groundingMetadata
-        console.log('[Book Lookup] Grounding Sources Found:', metadata.webSearchQueries?.length || 0)
-        console.log('[Book Lookup] Search Queries:', metadata.webSearchQueries)
-      } else {
-        console.warn('[Book Lookup] No grounding metadata - Google Search may not have been used')
-      }
-
       // Collect all chunks
       let fullText = ''
-      if (response.text) {
-        fullText = response.text
-      } else {
+      for await (const chunk of response) {
+        if (chunk.text) {
+          fullText += chunk.text
+        }
+      }
+
+      console.log('[Book Lookup] Received response stream')
+
+      if (!fullText) {
         console.error('[Book Lookup] No text in response')
         // kein Sinn, weitere Versuche mit derselben Antwort zu machen
         break

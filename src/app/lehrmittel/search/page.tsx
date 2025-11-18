@@ -38,7 +38,7 @@ export default function LehrmittelSearchPage() {
         body: JSON.stringify({ query }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as { error?: string; data: SearchResult };
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to search');

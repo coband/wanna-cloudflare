@@ -1,16 +1,14 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = 'edge';
-
 export async function POST(request: NextRequest) {
   try {
     const { env } = await getCloudflareContext();
-    
+
     if (!env.AI) {
       return NextResponse.json(
-        { error: 'AI binding not found' }, 
-        { status: 500 }
+        { error: "AI binding not found" },
+        { status: 500 },
       );
     }
 
@@ -19,8 +17,8 @@ export async function POST(request: NextRequest) {
 
     if (!query) {
       return NextResponse.json(
-        { error: 'Query is required' },
-        { status: 400 }
+        { error: "Query is required" },
+        { status: 400 },
       );
     }
 
@@ -30,13 +28,14 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, data: answer });
-
   } catch (error: unknown) {
-    console.error('Search error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An error occurred during search';
+    console.error("Search error:", error);
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "An error occurred during search";
     return NextResponse.json(
       { error: errorMessage },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

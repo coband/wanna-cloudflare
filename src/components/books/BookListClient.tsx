@@ -78,7 +78,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
       if (searchTerm.trim()) {
         params.search = {
           term: searchTerm.trim(),
-          columns: ['title', 'author', 'isbn', 'subject', 'level']
+          columns: ['title', 'author', 'isbn', 'subject', 'level', 'publisher']
         }
       }
 

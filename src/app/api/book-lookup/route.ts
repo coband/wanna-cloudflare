@@ -203,11 +203,11 @@ Gib NUR das ausgefüllte JSON zurück!`;
         // Map deutsche Feldnamen zu englischen (flexibel für beide)
         const mappedBookData: BookData = {
           title: (rawData.Titel || rawData.title || "").trim(),
-          author: (rawData.Autor || rawData.author || "").trim(),
-          isbn: (rawData.ISBN || rawData.isbn || "").toString(),
-          publisher: (rawData.Verlag || rawData.publisher || undefined)
+          author: (rawData.Autor || rawData.author || "Unbekannt").trim(),
+          isbn: (rawData.ISBN || rawData.isbn || "Unbekannt").toString(),
+          publisher: (rawData.Verlag || rawData.publisher || "Unbekannt")
             ?.toString(),
-          subject: (rawData.Fach || rawData.subject || undefined)?.toString(),
+          subject: (rawData.Fach || rawData.subject || "Unbekannt")?.toString(),
           description:
             (rawData.Beschreibung || rawData.description || undefined)
               ?.toString(),
@@ -218,29 +218,9 @@ Gib NUR das ausgefüllte JSON zurück!`;
           type: (rawData.Typ || rawData.type || undefined)?.toString(),
         };
 
-        const allNullishCoreFields =
-          (rawData.Titel === null || typeof rawData.Titel === "undefined") &&
-          (rawData.Autor === null || typeof rawData.Autor === "undefined");
-
-        console.log("[Book Lookup] Mapped book data:", {
-          title: mappedBookData.title,
-          author: mappedBookData.author,
-          isbn: mappedBookData.isbn,
-          hasPublisher: !!mappedBookData.publisher,
-          hasSubject: !!mappedBookData.subject,
-          allNullishCoreFields,
-        });
-
-        // Validate required fields
-        if (
-          !mappedBookData.title || !mappedBookData.author ||
-          allNullishCoreFields
-        ) {
-          console.warn("[Book Lookup] Missing required fields from Gemini:", {
-            hasTitle: !!mappedBookData.title,
-            hasAuthor: !!mappedBookData.author,
-            allNullishCoreFields,
-          });
+        // Validate required fields - Title is strictly required
+        if (!mappedBookData.title) {
+          console.warn("[Book Lookup] Missing title from Gemini");
           // Noch ein Versuch, falls verfügbar
           if (attempt < MAX_GEMINI_ATTEMPTS) {
             continue;
@@ -248,10 +228,12 @@ Gib NUR das ausgefüllte JSON zurück!`;
           break;
         }
 
-        console.log(
-          "[Book Lookup] Success! Book found via Gemini:",
-          mappedBookData.title,
-        );
+        console.log("[Book Lookup] Mapped book data:", {
+          title: mappedBookData.title,
+          author: mappedBookData.author,
+          isbn: mappedBookData.isbn,
+        });
+
         bookDataFromGemini = mappedBookData;
         break;
       } catch (parseError) {
@@ -280,7 +262,7 @@ Gib NUR das ausgefüllte JSON zurück!`;
       return NextResponse.json({
         success: false,
         error:
-          "Keine ausreichenden Buchinformationen gefunden. Bitte versuchen Sie es erneut oder suchen Sie direkt bei Orell Füssli oder im Lernmedien-Shop.",
+          "Keine ausreichenden Buchinformationen gefunden (Titel fehlt). Bitte versuchen Sie es erneut oder suchen Sie manuell.",
         fallbackUrls,
       });
     }

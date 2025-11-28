@@ -9,13 +9,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded } = useUser();
 
-  const navItems = [
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "Katalog", href: "/books" },
-    { name: "Fachbereiche", href: "/fachbereiche" },
-    { name: "Neuerscheinungen", href: "/neuerscheinungen" },
-    { name: "Lehrmittel finden", href: "/lehrmittel/search" },
-  ];
+
 
   if (!isLoaded) {
     return (
@@ -33,7 +27,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
-            <Link href="/dashboard" className="flex items-center gap-2 group">
+            <Link href="/books" className="flex items-center gap-2 group">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-md group-hover:shadow-lg transition-all duration-300">
                 W
               </div>
@@ -45,7 +39,11 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-1">
-            {navItems.map((item) => {
+            {[
+              { name: "Katalog", href: "/books" },
+              { name: "Lehrmittel finden", href: "/lehrmittel/search" },
+              { name: "Massen-Import", href: "/massen-import" },
+            ].map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link

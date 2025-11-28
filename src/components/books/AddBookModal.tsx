@@ -151,7 +151,7 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
       return
     }
 
-    const requiredFields: Array<keyof FormState> = ['title', 'author', 'isbn', 'publisher', 'subject']
+    const requiredFields: Array<keyof FormState> = ['title', 'author']
     for (const field of requiredFields) {
       const value = formState[field]
       if (typeof value === 'string' && value.trim() === '') {
@@ -292,7 +292,7 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
             </div>
             <div className="md:col-span-2">
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                ISBN *
+                ISBN
               </label>
               <div className="flex flex-wrap gap-2">
                 <input
@@ -317,7 +317,7 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Verlag *
+                Verlag
               </label>
               <input
                 name="publisher"
@@ -330,7 +330,7 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Fach *
+                Fach
               </label>
               <input
                 name="subject"

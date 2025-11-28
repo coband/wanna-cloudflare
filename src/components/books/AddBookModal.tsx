@@ -54,10 +54,12 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isScannerOpen, setIsScannerOpen] = useState(false)
   const [isLookingUpBook, setIsLookingUpBook] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     if (!isOpen) {
       setFormState(initialFormState)
+      setSearchQuery('')
       setError(null)
       setIsSubmitting(false)
     }
@@ -83,7 +85,7 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
     }))
   }
 
-  const lookupBookByIsbn = async (isbn: string) => {
+  const lookupBook = async (query: string) => {
     setError(null)
     setIsLookingUpBook(true)
 
@@ -93,7 +95,7 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ isbn })
+        body: JSON.stringify({ query })
       })
 
       const result: BookLookupResponse = await response.json()
@@ -105,7 +107,7 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
           ...prev,
           title: bookData.title || prev.title,
           author: bookData.author || prev.author,
-          isbn: bookData.isbn || isbn,
+          isbn: bookData.isbn || prev.isbn,
           publisher: bookData.publisher || prev.publisher,
           subject: bookData.subject || prev.subject,
           description: bookData.description || prev.description,
@@ -125,18 +127,19 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
   }
 
   const handleIsbnScan = async (isbn: string) => {
-    await lookupBookByIsbn(isbn)
+    setSearchQuery(isbn)
+    await lookupBook(isbn)
   }
 
-  const handleManualLookup = async () => {
-    const isbn = formState.isbn.trim()
+  const handleSearch = async () => {
+    const query = searchQuery.trim()
     
-    if (!isbn) {
-      setError('Bitte geben Sie eine ISBN ein')
+    if (!query) {
+      setError('Bitte geben Sie einen Suchbegriff ein')
       return
     }
 
-    await lookupBookByIsbn(isbn)
+    await lookupBook(query)
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -226,6 +229,40 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
         </div>
 
         <form onSubmit={handleSubmit} className="max-h-[75vh] overflow-y-auto px-6 py-4">
+          {/* Search Section */}
+          <div className="mb-6 rounded-lg bg-gray-50 p-4 border border-gray-200">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Buch suchen (Titel, Autor, ISBN)
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleSearch()
+                  }
+                }}
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                placeholder="z.B. Harry Potter, 978-3-551-55167-2"
+              />
+              <button
+                type="button"
+                onClick={handleSearch}
+                disabled={isLookingUpBook || !searchQuery.trim()}
+                className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLookingUpBook ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+                Suchen
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -266,16 +303,6 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
                   placeholder="978-3-16-148410-0"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={handleManualLookup}
-                  disabled={isLookingUpBook || !formState.isbn.trim()}
-                  className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  title="ISBN nachschlagen"
-                >
-                  <Search className="h-5 w-5" />
-                  <span className="hidden sm:inline">Suchen</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => setIsScannerOpen(true)}

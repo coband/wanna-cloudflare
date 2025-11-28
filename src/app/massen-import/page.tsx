@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { useUser, useSession } from "@clerk/nextjs"
+import { useSession } from "@clerk/nextjs"
 import { 
   Loader2, 
-  Upload, 
   Play, 
   Trash2, 
   CheckCircle2, 
@@ -42,7 +41,7 @@ interface ImportItem {
 }
 
 export default function MassImportPage() {
-  const { user } = useUser()
+  // const { user } = useUser()
   const { session } = useSession()
   
   const [inputText, setInputText] = useState("")
@@ -155,7 +154,7 @@ export default function MassImportPage() {
     }
   }
 
-  const updateItemData = (id: string, field: string, value: any) => {
+  const updateItemData = (id: string, field: string, value: string | boolean) => {
     setItems(prev => prev.map(item => {
       if (item.id !== id || !item.data) return item
       return {
@@ -367,7 +366,7 @@ function ImportItemRow({
   onSave 
 }: { 
   item: ImportItem
-  onUpdate: (field: string, value: any) => void
+  onUpdate: (field: string, value: string | boolean) => void
   onRemove: () => void
   onSave: () => void
 }) {

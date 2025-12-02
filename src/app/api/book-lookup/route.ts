@@ -131,7 +131,7 @@ Gib NUR das ausgefüllte JSON zurück!`;
     const config = {
       temperature: 0, // maximal deterministisch
       thinkingConfig: {
-        thinkingBudget: -1,
+        thinkingBudget: 0,
       },
       tools: [{ googleSearch: {} }],
     };
@@ -154,10 +154,21 @@ Gib NUR das ausgefüllte JSON zurück!`;
 
       // Collect all chunks
       let fullText = "";
+      let finalUsageMetadata;
+
       for await (const chunk of response) {
         if (chunk.text) {
           fullText += chunk.text;
         }
+        if (chunk.usageMetadata) {
+          finalUsageMetadata = chunk.usageMetadata;
+        }
+      }
+
+      if (finalUsageMetadata) {
+        console.log(
+          `[Book Lookup] Token Usage - Input: ${finalUsageMetadata.promptTokenCount}, Output: ${finalUsageMetadata.candidatesTokenCount}, Total: ${finalUsageMetadata.totalTokenCount}`,
+        );
       }
 
       console.log("[Book Lookup] Received response stream");

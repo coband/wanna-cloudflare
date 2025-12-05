@@ -147,7 +147,10 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
   const handleBookCreated = (book: Book) => {
     setFeedbackMessage(`"${book.title}" wurde erfolgreich hinzugefügt.`)
-    void loadBooks()
+    // Optimistic Update: Add to list immediately
+    setBooks(prevBooks => [book, ...prevBooks])
+    // Optionally background re-fetch to ensure consistency (e.g. if sorting is active)
+    // loadBooks() 
   }
 
   const handleLoadMore = () => {

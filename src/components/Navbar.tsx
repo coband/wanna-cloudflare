@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { UserButton, useUser, OrganizationSwitcher } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 
 export default function Navbar() {
@@ -70,7 +70,14 @@ export default function Navbar() {
 
           {/* User Actions */}
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 pl-4 border-l border-gray-200">
+            <div className="flex items-center gap-4 pl-4 border-l border-gray-200">
+              <OrganizationSwitcher 
+                appearance={{
+                  elements: {
+                    organizationSwitcherTrigger: "h-9 px-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors"
+                  }
+                }}
+              />
               <UserButton 
                 appearance={{
                   elements: {

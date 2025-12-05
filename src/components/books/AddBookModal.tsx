@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import type { SessionResource } from '@clerk/types'
 import { X, Loader2, ScanBarcode, Search } from 'lucide-react'
 
@@ -49,6 +50,7 @@ const initialFormState: FormState = {
 }
 
 export default function AddBookModal({ isOpen, session, onClose, onSuccess }: AddBookModalProps) {
+  const { orgId } = useAuth()
   const [formState, setFormState] = useState<FormState>(initialFormState)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -191,7 +193,7 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
 
     setIsSubmitting(true)
     try {
-      const result = await createBook(payload, session)
+      const result = await createBook(payload, session, orgId)
       if (!result.success || !result.data) {
         setError(result.error ?? 'Unbekannter Fehler beim Speichern.')
         return

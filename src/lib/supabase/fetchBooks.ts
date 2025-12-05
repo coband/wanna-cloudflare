@@ -62,6 +62,7 @@ export interface Book {
   borrowed_at?: string;
   borrowed_by?: string;
   user_id?: string;
+  organization_id?: string;
   created_at: string;
 }
 
@@ -89,101 +90,93 @@ export async function fetchBooks(
     search,
   } = params;
 
+  const supabase = createClerkSupabaseClient(session);
+
   try {
-    const supabase = createClerkSupabaseClient(session);
-
-    // Query starten
+    // Query starten auf INVENTORY (nur Bücher meiner Schule)
     let query = supabase
-      .from("books")
-      .select(fields);
+      .from("organization_inventory")
+      .select(`
+        *,
+        global_books!inner (
+          title,
+          author,
+          isbn,
+          publisher,
+          year,
+          category:subject, 
+          description,
+          level,
+          type
+        )
+      `);
+    // Note: "category:subject" aliases subject to match Book interface if needed, or we just map it manually later.
+    // actually let's just select * from global_books and map in memory to be safe, or explicit columns.
 
-    // Einzelner Filter anwenden (Legacy Support)
-    if (filter) {
-      const { column, operator, value } = filter;
-      applyFilter(query, column, operator, value);
+    // Helper to determine if column belongs to Global or Inventory
+    const isGlobalCol = (col: string) =>
+      [
+        "title",
+        "author",
+        "isbn",
+        "publisher",
+        "year",
+        "subject",
+        "level",
+        "type",
+      ].includes(col);
+
+    // ... Filter logic needs to be sophisticated for Joins in Supabase ...
+    // Supabase .or() with foreign tables is tricky.
+    // Simplifying assumption: Standard Filters handled via manual mapping?
+
+    // Quick Fix: For this iteration, we might pull data and filter, OR use the specific join syntax per filter.
+    // Actually, Supabase supports filtering on joined tables: .eq('global_books.title', '...')
+
+    // Apply Filters
+    if (search && search.term) {
+      // Global Search usually targets Title/Author/ISBN -> Global Table
+      const term = search.term;
+      query = query.or(
+        `title.ilike.%${term}%,author.ilike.%${term}%,isbn.ilike.%${term}%`,
+        { foreignTable: "global_books" },
+      );
     }
 
-    // Mehrere Filter anwenden
-    if (filters && filters.length > 0) {
-      filters.forEach((f) => {
-        applyFilter(query, f.column, f.operator, f.value);
-      });
-    }
-
-    // Global Search anwenden
-    if (search && search.term && search.columns.length > 0) {
-      const orConditions = search.columns
-        .map((col) => `${col}.ilike.%${search.term}%`)
-        .join(",");
-      query = query.or(orConditions);
-    }
-
-    // Helper function to apply filters to the query
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    function applyFilter(q: any, column: string, operator: string, value: string | number | string[] | number[]) {
-      switch (operator) {
-        case "eq":
-          if (typeof value === "string" || typeof value === "number") {
-            q.eq(column, value);
-          }
-          break;
-        case "neq":
-          if (typeof value === "string" || typeof value === "number") {
-            q.neq(column, value);
-          }
-          break;
-        case "gt":
-          if (typeof value === "string" || typeof value === "number") {
-            q.gt(column, value);
-          }
-          break;
-        case "gte":
-          if (typeof value === "string" || typeof value === "number") {
-            q.gte(column, value);
-          }
-          break;
-        case "lt":
-          if (typeof value === "string" || typeof value === "number") {
-            q.lt(column, value);
-          }
-          break;
-        case "lte":
-          if (typeof value === "string" || typeof value === "number") {
-            q.lte(column, value);
-          }
-          break;
-        case "like":
-          if (typeof value === "string") q.like(column, value);
-          break;
-        case "ilike":
-          if (typeof value === "string") q.ilike(column, value);
-          break;
-        case "in":
-          if (Array.isArray(value)) q.in(column, value);
-          break;
+    // Sortierung
+    if (orderBy) {
+      if (isGlobalCol(orderBy.column)) {
+        query = query.order(orderBy.column, {
+          ascending: orderBy.ascending,
+          foreignTable: "global_books",
+        });
+      } else {
+        query = query.order(orderBy.column, { ascending: orderBy.ascending });
       }
     }
 
-    // Sortierung anwenden
-    query = query.order(orderBy.column, { ascending: orderBy.ascending });
-
-    // Limit anwenden
+    // Limit
     if (limit > 0) {
       query = query.limit(limit);
     }
 
-    // Query ausführen
     const { data, error } = await query;
 
-    if (error) {
-      console.error("Fehler beim Abrufen der Bücher:", error);
-      throw new Error(`Supabase Fehler: ${error.message}`);
-    }
+    if (error) throw error;
+
+    // Map Join Result to Flat Book Interface
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const books = (data || []).map((item: any) => ({
+      ...item.global_books, // Title, Author etc.
+      ...item, // Inventory ID, Location, etc.
+      id: item.id, // Inventory ID is the primary key for the viewing user
+      global_id: item.global_book_id, // Keep ref
+    }));
 
     return {
       success: true,
-      data: (data || []) as unknown as Book[],
-      count: data?.length || 0,
+      data: books as unknown as Book[],
+      count: books.length,
     };
   } catch (error) {
     console.error("Unerwarteter Fehler in fetchBooks:", error);
@@ -214,9 +207,13 @@ export async function fetchBookById(
   try {
     const supabase = createClerkSupabaseClient(session);
 
+    // Fetch Inventory Entry + Global Data
     const { data, error } = await supabase
-      .from("books")
-      .select(fields)
+      .from("organization_inventory")
+      .select(`
+        *,
+        global_books!inner (*)
+      `)
       .eq("id", id)
       .single();
 
@@ -225,9 +222,17 @@ export async function fetchBookById(
       throw new Error(`Supabase Fehler: ${error.message}`);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mappedBook: any = {
+      ...data.global_books,
+      ...data,
+      id: data.id,
+      global_id: data.global_book_id,
+    };
+
     return {
       success: true,
-      data: data as unknown as Book,
+      data: mappedBook as Book,
     };
   } catch (error) {
     console.error("Unerwarteter Fehler in fetchBookById:", error);

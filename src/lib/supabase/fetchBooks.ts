@@ -83,10 +83,7 @@ export async function fetchBooks(
 
   const {
     limit = 10,
-    fields = "*",
     orderBy = { column: "created_at", ascending: false },
-    filter,
-    filters,
     search,
   } = params;
 
@@ -192,7 +189,8 @@ export async function fetchBooks(
 // Hilfsfunktion: Ein einzelnes Buch anhand der ID abrufen
 export async function fetchBookById(
   id: string,
-  fields: string = "*",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _fields: string = "*",
   session: SessionResource | null | undefined,
 ) {
   // Auth-Prüfung am Anfang

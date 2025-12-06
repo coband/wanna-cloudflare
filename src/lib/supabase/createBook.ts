@@ -39,7 +39,7 @@ export async function createBook(
   }
 
   // Use explicit activeOrgId if provided, otherwise try session properties (though unreliable)
-  // @ts-ignore
+  // @ts-expect-error: Clerk session types are inconsistent or missing orgId properties in some versions
   const orgId = activeOrgId || session.orgId ||
     session.lastActiveOrganizationId;
 

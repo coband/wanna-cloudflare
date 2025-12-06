@@ -120,6 +120,7 @@ export interface Database {
                     organization_id?: string | null;
                     created_at?: string;
                 };
+                // eslint-disable-next-line @typescript-eslint/no-empty-object-type
                 Update: {
                     // Logs usually immutable
                 };

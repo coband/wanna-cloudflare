@@ -262,6 +262,20 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
             <div className="relative min-w-[200px]">
               <select
+                value={selectedMediaType}
+                onChange={(e) => setSelectedMediaType(e.target.value)}
+                className="w-full appearance-none bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Alle Medienarten</option>
+                {MEDIA_TYPES.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            <div className="relative min-w-[200px]">
+              <select
                 value={selectedLevel}
                 onChange={(e) => setSelectedLevel(e.target.value)}
                 className="w-full appearance-none bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"

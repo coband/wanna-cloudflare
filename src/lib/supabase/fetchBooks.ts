@@ -176,9 +176,11 @@ export async function fetchBooks(
             query = query.ilike(column, filter.value as string);
             break;
           case "in":
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             query = query.in(column, filter.value as any[]);
             break;
           case "cs":
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             query = query.contains(column, filter.value as any);
             break;
         }

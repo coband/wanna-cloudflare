@@ -33,8 +33,10 @@ export interface FetchBooksParams {
       | "lt"
       | "lte"
       | "like"
+      | "like"
       | "ilike"
-      | "in";
+      | "in"
+      | "cs";
     value: string | number | string[] | number[];
   }>;
   search?: {
@@ -52,7 +54,7 @@ export interface Book {
   isbn?: string;
   publisher?: string;
   year?: number;
-  level?: string;
+  level?: string[];
   subject?: string;
   type?: string;
   school?: string;
@@ -85,6 +87,7 @@ export async function fetchBooks(
     limit = 10,
     orderBy = { column: "created_at", ascending: false },
     search,
+    filters,
   } = params;
 
   const supabase = createClerkSupabaseClient(session);
@@ -138,6 +141,48 @@ export async function fetchBooks(
         `title.ilike.%${term}%,author.ilike.%${term}%,isbn.ilike.%${term}%`,
         { foreignTable: "global_books" },
       );
+    }
+
+    // Filter anwenden
+    if (filters && filters.length > 0) {
+      filters.forEach((filter) => {
+        const column = isGlobalCol(filter.column)
+          ? `global_books.${filter.column}`
+          : filter.column;
+
+        switch (filter.operator) {
+          case "eq":
+            query = query.eq(column, filter.value);
+            break;
+          case "neq":
+            query = query.neq(column, filter.value);
+            break;
+          case "gt":
+            query = query.gt(column, filter.value);
+            break;
+          case "gte":
+            query = query.gte(column, filter.value);
+            break;
+          case "lt":
+            query = query.lt(column, filter.value);
+            break;
+          case "lte":
+            query = query.lte(column, filter.value);
+            break;
+          case "like":
+            query = query.like(column, filter.value as string);
+            break;
+          case "ilike":
+            query = query.ilike(column, filter.value as string);
+            break;
+          case "in":
+            query = query.in(column, filter.value as any[]);
+            break;
+          case "cs":
+            query = query.contains(column, filter.value as any);
+            break;
+        }
+      });
     }
 
     // Sortierung

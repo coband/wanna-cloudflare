@@ -19,7 +19,7 @@ export interface Database {
                     subject: string | null;
                     description: string | null;
                     year: number | null;
-                    level: string | null;
+                    level: string[] | null;
                     type: string | null;
                     cover_image: string | null;
                     created_at: string;

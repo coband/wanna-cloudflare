@@ -12,17 +12,9 @@ interface BookListClientProps {
   initialLimit?: number
 }
 
-const SUBJECTS = [
-  'Mathematik', 'Deutsch', 'Englisch', 'Französisch', 
-  'Natur & Technik', 'Geschichte', 'Geografie', 'Musik', 
-  'Bildnerisches Gestalten', 'Sport', 'Religion/Ethik', 'Informatik'
-]
+import { SUBJECTS, LEVELS, MEDIA_TYPES } from '@/lib/constants'
 
-const LEVELS = [
-  'Kindergarten', '1. Klasse', '2. Klasse', '3. Klasse', 
-  '4. Klasse', '5. Klasse', '6. Klasse', 
-  'Sekundarstufe I', 'Sekundarstufe II', 'Erwachsenenbildung'
-]
+// Removed local SUBJECTS definition since we import it
 
 export default function BookListClient({ initialLimit = 12 }: BookListClientProps) {
   const { user, isLoaded } = useUser()
@@ -37,7 +29,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   const [limit, setLimit] = useState(initialLimit)
   // const [activeTab, setActiveTab] = useState<'titel' | 'autor' | 'fachbereich' | 'schulstufe' | 'erscheinungsjahr'>('titel') // Removed activeTab
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
-  const [filterType, setFilterType] = useState<'alle' | 'bücher' | 'arbeitsblätter' | 'digitale_medien'>('alle')
+  const [selectedMediaType, setSelectedMediaType] = useState<string>('')
   const [selectedSubject, setSelectedSubject] = useState<string>('')
   const [selectedLevel, setSelectedLevel] = useState<string>('')
   
@@ -82,6 +74,15 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
         }
       }
 
+      // Medientyp Filter
+      if (selectedMediaType) {
+        params.filters?.push({
+          column: 'type',
+          operator: 'eq',
+          value: selectedMediaType
+        })
+      }
+
       // Fachbereich Filter
       if (selectedSubject) {
         params.filters?.push({
@@ -95,8 +96,8 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
       if (selectedLevel) {
         params.filters?.push({
           column: 'level',
-          operator: 'ilike',
-          value: `%${selectedLevel}%`
+          operator: 'cs', // contains: checks if array column contains the value
+          value: [selectedLevel] // Pass as array
         })
       }
 
@@ -112,7 +113,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     } finally {
       setLoading(false)
     }
-  }, [user, session, limit, sortBy, sortOrder, searchTerm, selectedSubject, selectedLevel])
+  }, [user, session, limit, sortBy, sortOrder, searchTerm, selectedSubject, selectedLevel, selectedMediaType])
 
   useEffect(() => {
     if (!isLoaded || !user) {
@@ -125,7 +126,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, selectedSubject, selectedLevel])
+  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, selectedSubject, selectedLevel, selectedMediaType])
 
   useEffect(() => {
     if (!feedbackMessage) {
@@ -273,11 +274,12 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
               <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
             </div>
 
-            {(selectedSubject || selectedLevel) && (
+            {(selectedSubject || selectedLevel || selectedMediaType) && (
               <button
                 onClick={() => {
                   setSelectedSubject('')
                   setSelectedLevel('')
+                  setSelectedMediaType('')
                 }}
                 className="text-sm text-blue-600 hover:text-blue-800 underline"
               >
@@ -315,28 +317,6 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
                 <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-          </div>
-
-          {/* Filter-Buttons */}
-          <div className="flex space-x-1 mb-4 overflow-x-auto pb-2">
-            {[
-              { key: 'alle', label: 'Alle Ergebnisse' },
-              { key: 'bücher', label: 'Bücher' },
-              { key: 'arbeitsblätter', label: 'Arbeitsblätter' },
-              { key: 'digitale_medien', label: 'Digitale Medien' }
-            ].map((filter) => (
-              <button
-                key={filter.key}
-                onClick={() => setFilterType(filter.key as typeof filterType)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
-                  filterType === filter.key
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -401,17 +381,18 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
               Keine Bücher gefunden
             </h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm || selectedSubject || selectedLevel
+              {searchTerm || selectedSubject || selectedLevel || selectedMediaType
                 ? 'Keine Bücher entsprechen Ihren Suchkriterien.'
                 : 'Es wurden noch keine Bücher hinzugefügt.'
               }
             </p>
-            {(searchTerm || selectedSubject || selectedLevel) && (
+            {(searchTerm || selectedSubject || selectedLevel || selectedMediaType) && (
               <button
                 onClick={() => {
                   setSearchTerm('')
                   setSelectedSubject('')
                   setSelectedLevel('')
+                  setSelectedMediaType('')
                 }}
                 className="text-blue-600 hover:text-blue-800 underline"
               >
@@ -477,7 +458,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
           {books.length > 0 && (
             <p>
               {books.length} Bücher angezeigt
-              {(searchTerm || selectedSubject || selectedLevel) && ' (gefiltert)'}
+              {(searchTerm || selectedSubject || selectedLevel || selectedMediaType) && ' (gefiltert)'}
             </p>
           )}
         </div>

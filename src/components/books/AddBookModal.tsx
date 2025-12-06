@@ -9,6 +9,7 @@ import type { Book } from '@/lib/supabase/fetchBooks'
 import { createBook, CreateBookInput } from '@/lib/supabase/createBook'
 import BarcodeScannerModal from './BarcodeScannerModal'
 import type { BookLookupResponse } from '@/app/api/book-lookup/route'
+import { SUBJECTS, MEDIA_TYPES, LEVELS } from '@/lib/constants'
 
 interface AddBookModalProps {
   isOpen: boolean
@@ -25,7 +26,7 @@ interface FormState {
   subject: string
   description: string
   year: string
-  level: string
+  level: string[]
   type: string
   school: string
   location: string
@@ -41,7 +42,7 @@ const initialFormState: FormState = {
   subject: '',
   description: '',
   year: '',
-  level: '',
+  level: [],
   type: '',
   school: '',
   location: '',
@@ -77,6 +78,26 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
       ...prev,
       [name]: value
     }))
+  }
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormState((prev) => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleLevelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value, checked } = e.target
+    setFormState((prev) => {
+      const currentLevels = prev.level
+      if (checked) {
+        return { ...prev, level: [...currentLevels, value] }
+      } else {
+        return { ...prev, level: currentLevels.filter((l) => l !== value) }
+      }
+    })
   }
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,7 +204,7 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
       subject: formState.subject,
       description: formState.description || undefined,
       year: yearValue ? Number(yearValue) : undefined,
-      level: formState.level || undefined,
+      level: formState.level.length > 0 ? formState.level : undefined,
       type: formState.type || undefined,
       school: formState.school || undefined,
       location: formState.location || undefined,
@@ -334,14 +355,20 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Fach
               </label>
-              <input
+              <select
                 name="subject"
                 value={formState.subject}
-                onChange={handleChange}
+                onChange={handleSelectChange}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                placeholder="Fachbereich (z. B. Mathematik)"
                 required
-              />
+              >
+                <option value="">Bitte wählen...</option>
+                {SUBJECTS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -358,29 +385,42 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
                 placeholder="2025"
               />
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Schulstufe
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Schulstufe(n)
               </label>
-              <input
-                name="level"
-                value={formState.level}
-                onChange={handleChange}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                placeholder="Primarstufe, Sekundarstufe I ..."
-              />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                {LEVELS.map((level) => (
+                  <label key={level} className="inline-flex items-center space-x-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      value={level}
+                      checked={formState.level.includes(level)}
+                      onChange={handleLevelChange}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>{level}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Medientyp
               </label>
-              <input
+              <select
                 name="type"
                 value={formState.type}
-                onChange={handleChange}
+                onChange={handleSelectChange}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                placeholder="Buch, Arbeitsblatt, Digital ..."
-              />
+              >
+                <option value="">Bitte wählen...</option>
+                {MEDIA_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">

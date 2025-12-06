@@ -10,7 +10,7 @@ export interface CreateBookInput {
   subject: string;
   description?: string;
   year?: number;
-  level?: string;
+  level?: string[];
   type?: string;
   school?: string;
   location?: string;
@@ -93,7 +93,7 @@ export async function createBook(
         subject: input.subject.trim() || "Unbekannt",
         description: input.description?.trim() || null,
         year: typeof input.year === "number" ? input.year : null,
-        level: input.level?.trim() || null,
+        level: input.level || null,
         type: input.type?.trim() || null,
       };
 

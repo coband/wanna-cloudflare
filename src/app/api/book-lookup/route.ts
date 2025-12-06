@@ -13,7 +13,7 @@ export interface BookLookupResponse {
     subject?: string;
     description?: string;
     year?: number;
-    level?: string;
+    level?: string[];
     type?: string;
   };
   error?: string;
@@ -91,6 +91,14 @@ Suche gezielt nach Buchinformationen (Titel, Autor, ISBN, Verlag, etc.).
 
 WICHTIG: Extrahiere die Buchinformationen AUS DEN GOOGLE-SUCHERGEBNISSEN und fülle das JSON damit aus!
 
+ZULÄSSIGE WERTE (bitte genau diese verwenden, wenn passend):
+- Fächer: "Mathematik", "Deutsch", "Natur Mensch Gesellschaft", "Englisch", "Französisch", "Bildnerisches Gestalten", "Sport", "Textiles und Technisches Gestalten", "Musik", "Medien und Informatik", "Religion Kultur Ethik", "Divers".
+- Medientypen: "Buch", "Lehrmittel", "Fachbuch", "Spiel", "Material", "Divers".
+- Schulstufen: "Kindergarten", "1. Klasse", "2. Klasse", "3. Klasse", "4. Klasse", "5. Klasse", "6. Klasse", "7. Klasse", "8. Klasse", "9. Klasse", "Erwachsenenbildung".
+
+Wähle für "Fach" und "Typ" den jeweils am besten passenden Begriff.
+Wähle für "Stufe" ALLE passenden Stufen als Array. Wenn ein Buch für mehrere Klassen geeignet ist (z.B. 1.-3. Klasse), liste alle einzeln auf.
+
 JSON-Format (EXAKT diese Feldnamen verwenden):
 {
   "Titel": "HIER DEN GEFUNDENEN BUCHTITEL EINTRAGEN",
@@ -98,16 +106,16 @@ JSON-Format (EXAKT diese Feldnamen verwenden):
   "ISBN": "HIER DIE GEFUNDENE ISBN EINTRAGEN (bevorzugt ISBN-13)",
   "Verlag": "HIER DEN GEFUNDENEN VERLAG EINTRAGEN",
   "Erscheinungsjahr": HIER DAS JAHR ALS ZAHL,
-  "Stufe": "Schulstufe aus Suchergebnissen",
-  "Fach": "Schulfach aus Suchergebnissen",
-  "Typ": "Medientyp aus Suchergebnissen",
+  "Stufe": ["Stufe 1", "Stufe 2"],
+  "Fach": "Eines der zulässigen Fächer",
+  "Typ": "Einer der zulässigen Medientypen",
   "Beschreibung": "Beschreibung aus Suchergebnissen"
 }
 
 ABLAUF:
 1. Google-Suche nach "${query}"
 2. Buchinformationen aus den Ergebnissen extrahieren. Nimm das relevanteste Buch, das zur Suche passt.
-3. JSON ausfüllen mit den GEFUNDENEN Daten
+3. JSON ausfüllen mit den GEFUNDENEN Daten. Versuche Fach, Typ und Stufe den obigen Listen zuzuordnen.
 4. Nur wenn wirklich nicht gefunden: null verwenden
 
 BEISPIEL was du AUS den Suchergebnissen extrahieren sollst:
@@ -211,6 +219,15 @@ Gib NUR das ausgefüllte JSON zurück!`;
         const rawData = JSON.parse(jsonText);
         console.log("[Book Lookup] Successfully parsed JSON");
 
+        // Parse levels: could be string or array
+        let levels: string[] = [];
+        const rawLevel = rawData.Stufe || rawData.level;
+        if (Array.isArray(rawLevel)) {
+          levels = rawLevel.map((l: unknown) => String(l));
+        } else if (typeof rawLevel === "string") {
+          levels = [rawLevel];
+        }
+
         // Map deutsche Feldnamen zu englischen (flexibel für beide)
         const mappedBookData: BookData = {
           title: (rawData.Titel || rawData.title || "").trim(),
@@ -225,7 +242,7 @@ Gib NUR das ausgefüllte JSON zurück!`;
           year: (rawData.Erscheinungsjahr || rawData.year || undefined) as
             | number
             | undefined,
-          level: (rawData.Stufe || rawData.level || undefined)?.toString(),
+          level: levels.length > 0 ? levels : undefined,
           type: (rawData.Typ || rawData.type || undefined)?.toString(),
         };
 

@@ -53,6 +53,26 @@ export default function MassImportPage() {
   
   // Queue processing ref to stop it if needed
   const abortControllerRef = useRef<AbortController | null>(null)
+  
+  // Global location state and ref
+  const [globalLocation, setGlobalLocation] = useState("")
+  const globalLocationRef = useRef("")
+
+  const handleGlobalLocationChange = (value: string) => {
+    setGlobalLocation(value)
+    globalLocationRef.current = value
+    
+    setItems(prev => prev.map(item => {
+      if (!item.data) return item
+      return {
+        ...item,
+        data: {
+          ...item.data,
+          location: value
+        }
+      }
+    }))
+  }
 
   const parseInput = () => {
     if (!inputText.trim()) return
@@ -112,10 +132,10 @@ export default function MassImportPage() {
                 subject: result.data!.subject || "Unbekannt",
                 description: result.data!.description || "",
                 year: result.data!.year ? String(result.data!.year) : "",
-                level: result.data!.level || "",
+                level: Array.isArray(result.data!.level) ? result.data!.level.join(", ") : (result.data!.level || ""),
                 type: result.data!.type || "",
                 school: "",
-                location: "",
+                location: globalLocationRef.current,
                 available: true,
                 hasPdf: false
               }
@@ -183,7 +203,7 @@ export default function MassImportPage() {
         subject: item.data.subject,
         description: item.data.description,
         year: item.data.year ? Number(item.data.year) : undefined,
-        level: item.data.level,
+        level: item.data.level ? [item.data.level] : undefined,
         type: item.data.type,
         school: item.data.school,
         location: item.data.location,
@@ -232,6 +252,22 @@ export default function MassImportPage() {
         {/* Input Section */}
         <div className="space-y-4">
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Standort für die ganze Liste
+              </label>
+              <input 
+                type="text"
+                value={globalLocation}
+                onChange={(e) => handleGlobalLocationChange(e.target.value)}
+                placeholder="z.B. Regal 4"
+                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Wird automatisch für alle geladenen Bücher übernommen.
+              </p>
+            </div>
+
             <div className="mb-2 flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700">
                 Buchliste (Autor, Titel, ISBN...)

@@ -1,19 +1,25 @@
 "use client"
 import { useState, useEffect, useCallback } from 'react'
-import { useUser, useSession, SignInButton } from '@clerk/nextjs'
+import { useUser, useSession, SignInButton, useAuth } from '@clerk/nextjs'
 import { fetchBooks, Book, FetchBooksParams } from '@/lib/supabase/fetchBooks'
 import BookCard from './BookCard'
 import BookListItem from './BookListItem'
 import BookDetails from './BookDetails'
-import { Search, Loader2, BookOpen, AlertCircle, Lock, List, Grid3X3, ChevronDown } from 'lucide-react'
+import AddBookModal from './AddBookModal'
+import { Search, Loader2, BookOpen, AlertCircle, Lock, List, Grid3X3, ChevronDown, Plus, Filter } from 'lucide-react'
 
 interface BookListClientProps {
   initialLimit?: number
 }
 
+import { SUBJECTS, LEVELS, MEDIA_TYPES } from '@/lib/constants'
+
+// Removed local SUBJECTS definition since we import it
+
 export default function BookListClient({ initialLimit = 12 }: BookListClientProps) {
   const { user, isLoaded } = useUser()
   const { session } = useSession()
+  const { isSignedIn, sessionClaims } = useAuth()
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,11 +27,19 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   const [sortBy, setSortBy] = useState<'created_at' | 'title' | 'author' | 'year' | 'subject'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [limit, setLimit] = useState(initialLimit)
-  const [activeTab, setActiveTab] = useState<'titel' | 'autor' | 'fachbereich' | 'schulstufe' | 'erscheinungsjahr'>('titel')
+  // const [activeTab, setActiveTab] = useState<'titel' | 'autor' | 'fachbereich' | 'schulstufe' | 'erscheinungsjahr'>('titel') // Removed activeTab
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
-  const [filterType, setFilterType] = useState<'alle' | 'bücher' | 'arbeitsblätter' | 'digitale_medien'>('alle')
+  const [selectedMediaType, setSelectedMediaType] = useState<string>('')
+  const [selectedSubject, setSelectedSubject] = useState<string>('')
+  const [selectedLevels, setSelectedLevels] = useState<string[]>([])
+  const [isLevelDropdownOpen, setIsLevelDropdownOpen] = useState(false)
+  
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null)
+  const appRole = sessionClaims?.app_role as string | undefined
+  const canManageBooks = isSignedIn && (appRole === 'admin' || appRole === 'superadmin')
 
   // Bücher laden
   const loadBooks = useCallback(async () => {
@@ -49,22 +63,44 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
         orderBy: {
           column: sortBy,
           ascending: sortOrder === 'asc'
+        },
+        filters: []
+      }
+
+      // Global Search
+      if (searchTerm.trim()) {
+        params.search = {
+          term: searchTerm.trim(),
+          columns: ['title', 'author', 'isbn', 'subject', 'level', 'publisher']
         }
       }
 
-      // Suchfilter basierend auf aktivem Tab
-      if (searchTerm.trim()) {
-        const searchColumn = activeTab === 'titel' ? 'title' : 
-                           activeTab === 'autor' ? 'author' :
-                           activeTab === 'fachbereich' ? 'subject' :
-                           activeTab === 'schulstufe' ? 'level' :
-                           'year'
-        
-        params.filter = {
-          column: searchColumn,
-          operator: 'ilike',
-          value: `%${searchTerm.trim()}%`
-        }
+      // Medientyp Filter
+      if (selectedMediaType) {
+        params.filters?.push({
+          column: 'type',
+          operator: 'eq',
+          value: selectedMediaType
+        })
+      }
+
+      // Fachbereich Filter
+      if (selectedSubject) {
+        params.filters?.push({
+          column: 'subject',
+          operator: 'ilike', // ilike für case-insensitive partial match, falls "Mathematik (Algebra)"
+          value: `%${selectedSubject}%`
+        })
+      }
+
+
+      // Schulstufe Filter (Multi-Select Overlap)
+      if (selectedLevels.length > 0) {
+        params.filters?.push({
+          column: 'level',
+          operator: 'overlaps',
+          value: selectedLevels
+        })
       }
 
       const result = await fetchBooks(params, session)
@@ -79,7 +115,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     } finally {
       setLoading(false)
     }
-  }, [user, session, limit, sortBy, sortOrder, searchTerm, activeTab])
+  }, [user, session, limit, sortBy, sortOrder, searchTerm, selectedSubject, selectedLevels, selectedMediaType])
 
   useEffect(() => {
     if (!isLoaded || !user) {
@@ -92,7 +128,16 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, activeTab])
+  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, selectedSubject, selectedLevels, selectedMediaType])
+
+  useEffect(() => {
+    if (!feedbackMessage) {
+      return
+    }
+
+    const timer = setTimeout(() => setFeedbackMessage(null), 5000)
+    return () => clearTimeout(timer)
+  }, [feedbackMessage])
 
   const handleBookClick = (book: Book) => {
     setSelectedBook(book)
@@ -101,6 +146,14 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
   const handleBookDelete = (bookId: string) => {
     setBooks(prevBooks => prevBooks.filter(book => book.id !== bookId))
+  }
+
+  const handleBookCreated = (book: Book) => {
+    setFeedbackMessage(`"${book.title}" wurde erfolgreich hinzugefügt.`)
+    // Optimistic Update: Add to list immediately
+    setBooks(prevBooks => [book, ...prevBooks])
+    // Optionally background re-fetch to ensure consistency (e.g. if sorting is active)
+    // loadBooks() 
   }
 
   const handleLoadMore = () => {
@@ -151,51 +204,141 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Katalog</h1>
-          <p className="text-gray-600">
-            Durchsuchen Sie unseren umfangreichen Katalog an Lehrmitteln für alle Schulstufen und Fachbereiche.
-          </p>
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Katalog</h1>
+            <p className="text-gray-600">
+              Durchsuchen Sie unseren umfangreichen Katalog an Lehrmitteln für alle Schulstufen und Fachbereiche.
+            </p>
+          </div>
+          {canManageBooks && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Buch hinzufügen
+            </button>
+          )}
         </div>
 
-        {/* Suchleiste */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        {feedbackMessage && (
+          <div className="mb-6 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+            {feedbackMessage}
+          </div>
+        )}
+
+        {/* Suchleiste und Filter */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 space-y-4">
           <div className="relative">
             <Search className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Suchen Sie nach Titel, Autor, Fachbereich oder Schulstufe..."
+              placeholder="Suchen Sie nach Titel, Autor, ISBN, Fachbereich..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 text-lg border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
             />
           </div>
-        </div>
 
-        {/* Filter-Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="flex border-b border-gray-200">
-            {[
-              { key: 'titel', label: 'Titel' },
-              { key: 'autor', label: 'Autor' },
-              { key: 'fachbereich', label: 'Fachbereich' },
-              { key: 'schulstufe', label: 'Schulstufe' },
-              { key: 'erscheinungsjahr', label: 'Erscheinungsjahr' }
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.key
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+          {/* Zusätzliche Filter */}
+          <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Filtern nach:</span>
+            </div>
+            
+            <div className="relative min-w-[200px]">
+              <select
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="w-full appearance-none bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                {tab.label}
+                <option value="">Alle Fachbereiche</option>
+                {SUBJECTS.map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            <div className="relative min-w-[200px]">
+              <select
+                value={selectedMediaType}
+                onChange={(e) => setSelectedMediaType(e.target.value)}
+                className="w-full appearance-none bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Alle Medienarten</option>
+                {MEDIA_TYPES.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            <div className="relative min-w-[200px]">
+              <button
+                onClick={() => setIsLevelDropdownOpen(!isLevelDropdownOpen)}
+                className="w-full text-left bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center justify-between"
+              >
+                <span className="truncate">
+                  {selectedLevels.length === 0 
+                    ? 'Alle Schulstufen' 
+                    : selectedLevels.length === 1 
+                      ? selectedLevels[0] 
+                      : `${selectedLevels.length} ausgewählt`}
+                </span>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
               </button>
-            ))}
+              
+              {isLevelDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setIsLevelDropdownOpen(false)}
+                  />
+                  <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {LEVELS.map(level => (
+                      <label 
+                        key={level} 
+                        className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedLevels.includes(level)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLevels([...selectedLevels, level])
+                            } else {
+                              setSelectedLevels(selectedLevels.filter(l => l !== level))
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 mr-2"
+                        />
+                        <span className="text-sm text-gray-700">{level}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {(selectedSubject || selectedLevels.length > 0 || selectedMediaType) && (
+              <button
+                onClick={() => {
+                  setSelectedSubject('')
+                  setSelectedLevels([])
+                  setSelectedMediaType('')
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Filter zurücksetzen
+              </button>
+            )}
           </div>
         </div>
+
+
 
         {/* Suchergebnisse Header */}
         <div className="mb-6">
@@ -223,28 +366,6 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
                 <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-          </div>
-
-          {/* Filter-Buttons */}
-          <div className="flex space-x-1 mb-4">
-            {[
-              { key: 'alle', label: 'Alle Ergebnisse' },
-              { key: 'bücher', label: 'Bücher' },
-              { key: 'arbeitsblätter', label: 'Arbeitsblätter' },
-              { key: 'digitale_medien', label: 'Digitale Medien' }
-            ].map((filter) => (
-              <button
-                key={filter.key}
-                onClick={() => setFilterType(filter.key as typeof filterType)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  filterType === filter.key
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -309,17 +430,22 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
               Keine Bücher gefunden
             </h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm 
-                ? `Keine Bücher entsprechen Ihrer Suche nach "${searchTerm}"`
+              {searchTerm || selectedSubject || selectedLevels.length > 0 || selectedMediaType
+                ? 'Keine Bücher entsprechen Ihren Suchkriterien.'
                 : 'Es wurden noch keine Bücher hinzugefügt.'
               }
             </p>
-            {searchTerm && (
+            {(searchTerm || selectedSubject || selectedLevels.length > 0 || selectedMediaType) && (
               <button
-                onClick={() => setSearchTerm('')}
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedSubject('')
+                  setSelectedLevels([])
+                  setSelectedMediaType('')
+                }}
                 className="text-blue-600 hover:text-blue-800 underline"
               >
-                Suche zurücksetzen
+                Filter zurücksetzen
               </button>
             )}
           </div>
@@ -381,11 +507,18 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
           {books.length > 0 && (
             <p>
               {books.length} Bücher angezeigt
-              {searchTerm && ` für "${searchTerm}"`}
+              {(searchTerm || selectedSubject || selectedLevels.length > 0 || selectedMediaType) && ' (gefiltert)'}
             </p>
           )}
         </div>
       </div>
+
+      <AddBookModal
+        isOpen={isAddModalOpen}
+        session={session}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={handleBookCreated}
+      />
 
       {/* Book Details Modal */}
       {selectedBook && (

@@ -89,8 +89,8 @@ export default function BookDetails({ book, isOpen, onClose, onDelete }: BookDet
     <div 
       className={`fixed inset-0 flex items-center justify-center p-4 z-50 transition-all duration-300 ease-out ${
         isOpen 
-          ? 'bg-black bg-opacity-20 backdrop-blur-lg backdrop-saturate-150' 
-          : 'bg-transparent backdrop-blur-none'
+          ? 'bg-black/50' 
+          : 'bg-transparent'
       }`}
       onClick={handleBackdropClick}
     >

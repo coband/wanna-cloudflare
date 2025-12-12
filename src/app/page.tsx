@@ -7,101 +7,95 @@ export default async function Home() {
   const { userId } = await auth();
   
   if (userId) {
-    redirect('/dashboard');
+    redirect('/books');
   }
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100">
-      <SignedOut>
-        <main className="text-center space-y-12 px-8">
-          {/* Logo/Brand */}
-          <div className="space-y-6">
-            <h1 className="text-6xl md:text-8xl font-bold text-indigo-600 tracking-tight">
-              WANNA
-            </h1>
-            <h2 className="text-2xl md:text-3xl font-semibold text-gray-800">
-              Lehrmittelbibliothek
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Entdecken Sie über 2000 Lehrmittel für alle Schulstufen und Fachbereiche. 
-              Moderne digitale Bibliothek mit umfassenden Lernmaterialien - 
-              jederzeit und überall verfügbar für Lehrkräfte und Schüler.
-            </p>
-          </div>
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Hero Section */}
+      <main className="flex-grow flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-100/50 blur-3xl" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-100/50 blur-3xl" />
+        </div>
 
-          {/* Features Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto my-16">
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+        <SignedOut>
+          <div className="text-center max-w-4xl mx-auto space-y-12 z-10">
+            {/* Logo/Brand */}
+            <div className="space-y-6 animate-fade-in-up">
+              <div className="inline-flex items-center justify-center p-2 bg-blue-50 rounded-2xl mb-6">
+                <span className="text-blue-600 font-medium px-4 py-1">Digitale Lehrmittelbibliothek</span>
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Umfangreicher Katalog</h3>
-              <p className="text-gray-600">Über 2000 Lehrmittel aus allen Fachbereichen und Schulstufen</p>
+              
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gray-900">
+                WANNA
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mt-2">
+                  Lehrmittelbibliothek
+                </span>
+              </h1>
+              
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                Der moderne Zugang zu über 2000 Lehrmitteln. 
+                Einfach, digital und immer verfügbar für Ihren Unterricht.
+              </p>
             </div>
-            
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Qualitätsgeprüft</h3>
-              <p className="text-gray-600">Alle Materialien werden von Fachexperten geprüft und bewertet</p>
-            </div>
-            
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Einfache Suche</h3>
-              <p className="text-gray-600">Intelligente Suchfunktion mit Filtern nach Fach, Stufe und mehr</p>
-            </div>
-          </div>
 
-          {/* Stats Section */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto my-16">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600 mb-2">2,347</div>
-                <div className="text-gray-600">Lehrmittel im Katalog</div>
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+              <Link href="/sign-in" className="w-full sm:w-auto">
+                <button className="w-full px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                  Anmelden
+                </button>
+              </Link>
+              
+              <Link href="/sign-up" className="w-full sm:w-auto">
+                <button className="w-full px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5">
+                  Konto erstellen
+                </button>
+              </Link>
+            </div>
+
+            {/* Feature Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-20 text-left">
+              <div className="p-6 rounded-2xl bg-white/50 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 text-blue-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">Umfangreich</h3>
+                <p className="text-gray-600 text-sm">Zugriff auf tausende Lehrmittel für alle Schulstufen.</p>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600 mb-2">843</div>
-                <div className="text-gray-600">Aktive Nutzer</div>
+
+              <div className="p-6 rounded-2xl bg-white/50 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4 text-indigo-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">Durchsuchbar</h3>
+                <p className="text-gray-600 text-sm">Intelligente Suche und Filter für schnelles Finden.</p>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600 mb-2">1,287</div>
-                <div className="text-gray-600">Ausleihvorgänge</div>
+
+              <div className="p-6 rounded-2xl bg-white/50 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 text-green-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">Geprüft</h3>
+                <p className="text-gray-600 text-sm">Qualitätsgesicherte Inhalte für Ihren Unterricht.</p>
               </div>
             </div>
           </div>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/sign-in">
-              <button className="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
-                Zur Bibliothek
-              </button>
-            </Link>
-            
-            <Link href="/sign-up">
-              <button className="w-full sm:w-auto px-8 py-4 border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105">
-                Registrieren
-              </button>
-            </Link>
-          </div>
-
-          {/* Tagline */}
-          <div className="mt-16">
-            <p className="text-sm text-gray-500">
-              WANNA Lehrmittelbibliothek - Moderne Lernmaterialien für zeitgemäßen Unterricht
-            </p>
-          </div>
-        </main>
-      </SignedOut>
+        </SignedOut>
+      </main>
+      
+      {/* Simple Footer */}
+      <footer className="py-6 text-center text-gray-400 text-sm">
+        <p>&copy; {new Date().getFullYear()} WANNA Lehrmittelbibliothek</p>
+      </footer>
     </div>
   );
 }

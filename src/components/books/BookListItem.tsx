@@ -69,7 +69,7 @@ export default function BookListItem({ book, onClick, onDelete }: BookListItemPr
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start mb-2">
             <div>
-              <div className="text-xs text-gray-500 mb-1">{book.subject} • {book.level}</div>
+              <div className="text-xs text-gray-500 mb-1">{book.subject} • {book.level?.join(', ')}</div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1 hover:text-blue-600 transition-colors">
                 {book.title || 'Unbekannter Titel'}
               </h3>

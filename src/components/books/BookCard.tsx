@@ -127,7 +127,7 @@ export default function BookCard({ book, onClick, onDelete }: BookCardProps) {
           {/* Level */}
           {book.level && (
             <div className="flex items-center">
-              <span>Level: {book.level}</span>
+              <span>Level: {book.level?.join(', ')}</span>
             </div>
           )}
         </div>

@@ -31,7 +31,8 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
   const [selectedMediaType, setSelectedMediaType] = useState<string>('')
   const [selectedSubject, setSelectedSubject] = useState<string>('')
-  const [selectedLevel, setSelectedLevel] = useState<string>('')
+  const [selectedLevels, setSelectedLevels] = useState<string[]>([])
+  const [isLevelDropdownOpen, setIsLevelDropdownOpen] = useState(false)
   
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
@@ -92,12 +93,13 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
         })
       }
 
-      // Schulstufe Filter
-      if (selectedLevel) {
+
+      // Schulstufe Filter (Multi-Select Overlap)
+      if (selectedLevels.length > 0) {
         params.filters?.push({
           column: 'level',
-          operator: 'cs', // contains: checks if array column contains the value
-          value: [selectedLevel] // Pass as array
+          operator: 'overlaps',
+          value: selectedLevels
         })
       }
 
@@ -113,7 +115,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
     } finally {
       setLoading(false)
     }
-  }, [user, session, limit, sortBy, sortOrder, searchTerm, selectedSubject, selectedLevel, selectedMediaType])
+  }, [user, session, limit, sortBy, sortOrder, searchTerm, selectedSubject, selectedLevels, selectedMediaType])
 
   useEffect(() => {
     if (!isLoaded || !user) {
@@ -126,7 +128,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, selectedSubject, selectedLevel, selectedMediaType])
+  }, [isLoaded, user, searchTerm, sortBy, sortOrder, limit, selectedSubject, selectedLevels, selectedMediaType])
 
   useEffect(() => {
     if (!feedbackMessage) {
@@ -275,24 +277,57 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
             </div>
 
             <div className="relative min-w-[200px]">
-              <select
-                value={selectedLevel}
-                onChange={(e) => setSelectedLevel(e.target.value)}
-                className="w-full appearance-none bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <button
+                onClick={() => setIsLevelDropdownOpen(!isLevelDropdownOpen)}
+                className="w-full text-left bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center justify-between"
               >
-                <option value="">Alle Schulstufen</option>
-                {LEVELS.map(level => (
-                  <option key={level} value={level}>{level}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                <span className="truncate">
+                  {selectedLevels.length === 0 
+                    ? 'Alle Schulstufen' 
+                    : selectedLevels.length === 1 
+                      ? selectedLevels[0] 
+                      : `${selectedLevels.length} ausgewählt`}
+                </span>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </button>
+              
+              {isLevelDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setIsLevelDropdownOpen(false)}
+                  />
+                  <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {LEVELS.map(level => (
+                      <label 
+                        key={level} 
+                        className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedLevels.includes(level)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLevels([...selectedLevels, level])
+                            } else {
+                              setSelectedLevels(selectedLevels.filter(l => l !== level))
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 mr-2"
+                        />
+                        <span className="text-sm text-gray-700">{level}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
-            {(selectedSubject || selectedLevel || selectedMediaType) && (
+            {(selectedSubject || selectedLevels.length > 0 || selectedMediaType) && (
               <button
                 onClick={() => {
                   setSelectedSubject('')
-                  setSelectedLevel('')
+                  setSelectedLevels([])
                   setSelectedMediaType('')
                 }}
                 className="text-sm text-blue-600 hover:text-blue-800 underline"
@@ -395,17 +430,17 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
               Keine Bücher gefunden
             </h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm || selectedSubject || selectedLevel || selectedMediaType
+              {searchTerm || selectedSubject || selectedLevels.length > 0 || selectedMediaType
                 ? 'Keine Bücher entsprechen Ihren Suchkriterien.'
                 : 'Es wurden noch keine Bücher hinzugefügt.'
               }
             </p>
-            {(searchTerm || selectedSubject || selectedLevel || selectedMediaType) && (
+            {(searchTerm || selectedSubject || selectedLevels.length > 0 || selectedMediaType) && (
               <button
                 onClick={() => {
                   setSearchTerm('')
                   setSelectedSubject('')
-                  setSelectedLevel('')
+                  setSelectedLevels([])
                   setSelectedMediaType('')
                 }}
                 className="text-blue-600 hover:text-blue-800 underline"
@@ -472,7 +507,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
           {books.length > 0 && (
             <p>
               {books.length} Bücher angezeigt
-              {(searchTerm || selectedSubject || selectedLevel || selectedMediaType) && ' (gefiltert)'}
+              {(searchTerm || selectedSubject || selectedLevels.length > 0 || selectedMediaType) && ' (gefiltert)'}
             </p>
           )}
         </div>

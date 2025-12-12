@@ -36,7 +36,8 @@ export interface FetchBooksParams {
       | "like"
       | "ilike"
       | "in"
-      | "cs";
+      | "cs"
+      | "overlaps";
     value: string | number | string[] | number[];
   }>;
   search?: {
@@ -182,6 +183,10 @@ export async function fetchBooks(
           case "cs":
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             query = query.contains(column, filter.value as any);
+            break;
+          case "overlaps":
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            query = query.overlaps(column, filter.value as any);
             break;
         }
       });

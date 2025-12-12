@@ -4,6 +4,7 @@ import {
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
+import OrganizationEnforcer from "@/components/auth/OrganizationEnforcer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,6 +33,7 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
         >
           <ClerkProvider>
+            <OrganizationEnforcer />
             <Navbar />
             {children}
           </ClerkProvider>

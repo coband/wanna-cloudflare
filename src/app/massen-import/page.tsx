@@ -458,11 +458,11 @@ function ImportItemRow({
         </div>
         
         {/* Collapsed View: Prioritize Title and Author */}
-        <div className="flex-1 grid gap-4 md:grid-cols-[2fr_1.5fr]">
+        <div className="flex-1 grid gap-4 grid-cols-1 md:grid-cols-[2fr_1.5fr]">
           <input 
             value={item.data?.title}
             onChange={(e) => onUpdate('title', e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm font-medium"
+            className="rounded border border-gray-300 px-2 py-1 text-sm font-medium w-full"
             placeholder="Titel"
             disabled={item.status === 'saved'}
             title={item.data?.title} // Tooltip for full text
@@ -470,7 +470,7 @@ function ImportItemRow({
           <input 
             value={item.data?.author}
             onChange={(e) => onUpdate('author', e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            className="rounded border border-gray-300 px-2 py-1 text-sm w-full"
             placeholder="Autor"
             disabled={item.status === 'saved'}
             title={item.data?.author}

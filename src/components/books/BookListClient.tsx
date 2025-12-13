@@ -243,12 +243,12 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
           {/* Zusätzliche Filter */}
           <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-100">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full md:w-auto">
               <Filter className="h-4 w-4 text-gray-500" />
               <span className="text-sm font-medium text-gray-700">Filtern nach:</span>
             </div>
             
-            <div className="relative min-w-[200px]">
+            <div className="relative w-full md:w-auto md:min-w-[200px]">
               <select
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
@@ -262,7 +262,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
               <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
             </div>
 
-            <div className="relative min-w-[200px]">
+            <div className="relative w-full md:w-auto md:min-w-[200px]">
               <select
                 value={selectedMediaType}
                 onChange={(e) => setSelectedMediaType(e.target.value)}
@@ -276,7 +276,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
               <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
             </div>
 
-            <div className="relative min-w-[200px]">
+            <div className="relative w-full md:w-auto md:min-w-[200px]">
               <button
                 onClick={() => setIsLevelDropdownOpen(!isLevelDropdownOpen)}
                 className="w-full text-left bg-gray-50 border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center justify-between"
@@ -330,7 +330,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
                   setSelectedLevels([])
                   setSelectedMediaType('')
                 }}
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
+                className="text-sm text-blue-600 hover:text-blue-800 underline w-full md:w-auto text-left md:text-center"
               >
                 Filter zurücksetzen
               </button>
@@ -342,11 +342,11 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
 
         {/* Suchergebnisse Header */}
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Suchergebnisse</h2>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Sortieren nach:</span>
-              <div className="relative">
+            <div className="flex items-center justify-between md:justify-end w-full md:w-auto space-x-4">
+              <span className="text-sm text-gray-600 hidden md:inline">Sortieren nach:</span>
+              <div className="relative flex-1 md:flex-none">
                 <select
                   value={`${sortBy}-${sortOrder}`}
                   onChange={(e) => {
@@ -354,7 +354,7 @@ export default function BookListClient({ initialLimit = 12 }: BookListClientProp
                     setSortBy(field as typeof sortBy)
                     setSortOrder(order as 'asc' | 'desc')
                   }}
-                  className="appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full md:w-auto appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="created_at-desc">Relevanz</option>
                   <option value="title-asc">Titel A-Z</option>

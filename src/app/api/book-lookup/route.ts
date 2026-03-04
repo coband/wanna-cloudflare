@@ -82,7 +82,7 @@ export async function POST(
       apiKey: apiKey,
     });
 
-    const model = "gemini-flash-latest";
+    const model = "gemini-3.1-flash-lite-preview";
 
     // Optimierter Prompt: Explizit die Nutzung der Suchergebnisse fordern
     const prompt =

@@ -18,6 +18,12 @@
   "ai": {
     "binding": "AI"
   },
+  "r2_buckets": [
+    {
+      "binding": "BOOK_MD_BUCKET",
+      "bucket_name": "extract-md"
+    }
+  ],
   "env": {
     "production": {
       "vars": {

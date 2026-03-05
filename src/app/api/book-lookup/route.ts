@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { checkRateLimit } from "./middleware";
 
 // Response interface matching our Book schema
@@ -82,7 +83,7 @@ export async function POST(
       apiKey: apiKey,
     });
 
-    const model = "gemini-flash-latest";
+    const model = "gemini-3.1-flash-lite-preview";
 
     // Optimierter Prompt: Explizit die Nutzung der Suchergebnisse fordern
     const prompt =
@@ -263,6 +264,63 @@ Gib NUR das ausgefüllte JSON zurück!`;
         });
 
         bookDataFromGemini = mappedBookData;
+
+        // --- Generate and Upload Markdown to R2 ---
+        try {
+          // getCloudflareContext gets the Cloudflare bindings configured in wrangler.jsonc
+          const { env } = await getCloudflareContext({ async: true });
+          if (env.BOOK_MD_BUCKET) {
+            const mdContent = [
+              `# ${mappedBookData.title}`,
+              ``,
+              `**Autor:** ${mappedBookData.author}`,
+              `**ISBN:** ${mappedBookData.isbn}`,
+              `**Verlag:** ${mappedBookData.publisher || "Unbekannt"}`,
+              `**Erscheinungsjahr:** ${mappedBookData.year || "Unbekannt"}`,
+              `**Fach:** ${mappedBookData.subject || "Unbekannt"}`,
+              `**Typ:** ${mappedBookData.type || "Unbekannt"}`,
+              `**Stufe:** ${
+                mappedBookData.level
+                  ? mappedBookData.level.join(", ")
+                  : "Unbekannt"
+              }`,
+              ``,
+              `## Beschreibung`,
+              mappedBookData.description || "Keine Beschreibung verfügbar.",
+            ].join("\n");
+
+            // Generate safe filename (ISBN-safeTitle.md)
+            const safeTitle = mappedBookData.title
+              .toLowerCase()
+              .replace(/[^a-z0-9äöüß]+/g, "-")
+              .replace(/(^-|-$)/g, "");
+            const safeIsbn = mappedBookData.isbn.replace(/[^0-9X-]/gi, "");
+
+            // Fallback unique filename part if no title or isbn is found at all (should be rare)
+            const filename = `${safeIsbn ? safeIsbn + "-" : "noisbn-"}${
+              safeTitle || Date.now()
+            }.md`;
+
+            console.log(
+              `[Book Lookup] Uploading markdown to R2 bucket as: ${filename}`,
+            );
+
+            // Upload to Cloudflare R2 bucket binding "BOOK_MD_BUCKET"
+            await env.BOOK_MD_BUCKET.put(filename, mdContent, {
+              httpMetadata: { contentType: "text/markdown; charset=utf-8" },
+            });
+            console.log(`[Book Lookup] Upload successful`);
+          } else {
+            console.warn(
+              "[Book Lookup] BOOK_MD_BUCKET binding not found in environment (Skipping R2 upload during dev).",
+            );
+          }
+        } catch (uploadError) {
+          console.error("[Book Lookup] R2 upload error:", uploadError);
+          // Do not fail the API call if upload fails (the JSON is what matters to the frontend directly)
+        }
+        // --- End Markdown Upload ---
+
         break;
       } catch (parseError) {
         console.error("[Book Lookup] JSON parse error:", parseError);

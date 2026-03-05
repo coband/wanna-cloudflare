@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // The project name "snowy-hat-052d" comes from the user's request
-    const answer = await env.AI.autorag("snowy-hat-052d").aiSearch({
+    // The project name "blue-band-d238" comes from the user's request
+    const answer = await env.AI.autorag("blue-band-d238").aiSearch({
       query: query,
     });
 

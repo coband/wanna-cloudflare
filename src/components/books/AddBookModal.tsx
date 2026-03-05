@@ -220,6 +220,17 @@ export default function AddBookModal({ isOpen, session, onClose, onSuccess }: Ad
         return
       }
 
+      // Generate and upload the markdown file to the R2 bucket
+      try {
+        await fetch('/api/upload-book-md', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+      } catch (uploadErr) {
+        console.error('Fehler beim Hochladen der Markdown-Datei:', uploadErr)
+      }
+
       if (onSuccess) {
         onSuccess(result.data)
       }

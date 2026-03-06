@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Sparkles, Search } from 'lucide-react';
+import { useSession } from '@clerk/nextjs';
+import { fetchBooks, Book } from '@/lib/supabase/fetchBooks';
+import BookCard from '@/components/books/BookCard';
+import BookDetails from '@/components/books/BookDetails';
 
 interface SearchSource {
   file_id: string;
@@ -23,6 +27,11 @@ export default function LehrmittelSearchPage() {
   const [result, setResult] = useState<SearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { session } = useSession();
+  const [availableBooks, setAvailableBooks] = useState<Book[]>([]);
+  const [isBooksLoading, setIsBooksLoading] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   // Load state from localStorage on mount
   useEffect(() => {
@@ -48,6 +57,90 @@ export default function LehrmittelSearchPage() {
       localStorage.removeItem('lehrmittelSearchResult');
     }
   }, [query, result, isLoaded]);
+
+  // Fetch local availability whenever result changes
+  useEffect(() => {
+    if (!result?.data || !isLoaded || !session) return;
+
+    const fetchLocalBooks = async () => {
+      setIsBooksLoading(true);
+      try {
+        const extractedIsbns: string[] = [];
+
+        const isbns = result.data
+          .map((source) => {
+            // Updated regex: Match strings starting with digits and hyphens, minimum 10 characters long
+            const match = source.filename.match(/^([0-9-]{10,})/); 
+            if (match) {
+              const rawIsbn = match[1].replace(/-+$/, '');
+              
+              // Extract the title part from the filename to check if it's mentioned
+              // E.g. "978-3-939965-73-2-lies-mal-2-das-heft...md" -> "lies-mal-2-das-heft..."
+              const titleSlug = source.filename
+                .replace(match[1], '') // Remove the starting ISBN
+                .replace(/\.md$/, '') // Remove .md
+                .replace(/^-+/, '');  // Remove leading hyphens
+              
+              // Filter out common German stop words and very short words
+              const stopWords = ['und', 'oder', 'fuer', 'mit', 'das', 'der', 'die', 'ein', 'eine', 'den', 'dem', 'des'];
+              const titleWords = titleSlug.split('-').filter(w => w.length > 3 && !stopWords.includes(w.toLowerCase()));
+              
+              // Only include this document's ISBN if the LLM's response actually mentions
+              // significant parts of its title (at least 2 matching words) or its ISBN.
+              const isIsbnMentioned = 
+                result.response.includes(rawIsbn) || 
+                result.response.replace(/-/g, '').includes(rawIsbn.replace(/-/g, ''));
+                
+              let matchedWordsCount = 0;
+              if (titleWords.length > 0) {
+                matchedWordsCount = titleWords.filter(word => 
+                  new RegExp(`\\b${word}\\b`, 'i').test(result.response)
+                ).length;
+              }
+                
+              // We require the ISBN to be mentioned OR at least ONE significant title word to be mentioned.
+              const isMentioned = isIsbnMentioned || matchedWordsCount >= 1;
+
+              if (isMentioned) {
+                const cleanedIsbn = rawIsbn.replace(/-/g, '');
+                extractedIsbns.push(cleanedIsbn);
+                extractedIsbns.push(rawIsbn);
+                return [rawIsbn, cleanedIsbn];
+              }
+            }
+            return null;
+          })
+          .filter((isbnArr): isbnArr is string[] => isbnArr !== null)
+          .flat();
+
+        if (isbns.length > 0) {
+          const uniqueIsbns = Array.from(new Set(isbns));
+          const response = await fetchBooks(
+            {
+              limit: 50,
+              filters: [{ column: 'isbn', operator: 'in', value: uniqueIsbns }]
+            },
+            session
+          );
+          
+          if (response.success) {
+            setAvailableBooks(response.data);
+          } else {
+            setAvailableBooks([]);
+          }
+        } else {
+          setAvailableBooks([]);
+        }
+      } catch (err) {
+        console.error("Error fetching available books:", err);
+        setAvailableBooks([]);
+      } finally {
+        setIsBooksLoading(false);
+      }
+    };
+
+    fetchLocalBooks();
+  }, [result, isLoaded, session]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,9 +284,54 @@ export default function LehrmittelSearchPage() {
                 )}
               </div>
             </div>
+
+            {/* Verfügbare Bücher */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900">
+                <span className="text-2xl">📚</span> Verfügbar in deiner Schule
+              </h2>
+
+              {isBooksLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500 mr-2" />
+                  <span className="text-gray-500">Prüfe Verfügbarkeit...</span>
+                </div>
+              ) : availableBooks.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {availableBooks.map((book) => (
+                    <BookCard
+                      key={book.id}
+                      book={book}
+                      onClick={() => {
+                        setSelectedBook(book);
+                        setIsDetailsOpen(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
+                  <p className="text-gray-500">
+                    Keines der gefundenen Bücher ist in deiner Schule verfügbar.
+                  </p>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Book Details Modal */}
+      {selectedBook && (
+        <BookDetails
+          book={selectedBook}
+          isOpen={isDetailsOpen}
+          onClose={() => {
+            setIsDetailsOpen(false);
+            setSelectedBook(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { checkRateLimit } from "./middleware";
 
 // Response interface matching our Book schema

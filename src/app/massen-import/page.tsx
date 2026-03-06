@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useSession } from "@clerk/nextjs"
 import { 
   Loader2, 
@@ -50,6 +50,10 @@ export default function MassImportPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [wordWrap, setWordWrap] = useState(true)
   const [progress, setProgress] = useState({ current: 0, total: 0 })
+  const [isLoaded, setIsLoaded] = useState(false)
+  
+  // Ref for auto-resume
+  const resumeProcessingRef = useRef(false)
   
   // Queue processing ref to stop it if needed
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -84,9 +88,67 @@ export default function MassImportPage() {
       status: "pending"
     }))
 
-    setItems(prev => [...prev, ...newItems])
+    // Overwrite the existing list instead of appending
+    setItems(newItems)
     setInputText("")
   }
+
+  // Load state from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedItems = localStorage.getItem("massImportItems")
+      const savedInput = localStorage.getItem("massImportInput")
+      const savedLocation = localStorage.getItem("massImportLocation")
+      const savedAutoStart = localStorage.getItem("massImportAutoStart")
+
+      if (savedLocation) {
+        setGlobalLocation(savedLocation)
+        globalLocationRef.current = savedLocation
+      }
+      if (savedInput) setInputText(savedInput)
+      if (savedItems) {
+        const parsed = JSON.parse(savedItems)
+        const loadedItems = parsed.map((item: ImportItem) => 
+          item.status === 'loading' ? { ...item, status: 'pending' } : item
+        )
+        setItems(loadedItems)
+        
+        if (savedAutoStart === "true" && loadedItems.some((i: ImportItem) => i.status === 'pending')) {
+          resumeProcessingRef.current = true
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load mass import state", e)
+    }
+    setIsLoaded(true)
+  }, [])
+
+  // Auto-resume if needed
+  useEffect(() => {
+    if (isLoaded && resumeProcessingRef.current && items.length > 0) {
+      resumeProcessingRef.current = false
+      processQueue()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, items])
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    if (!isLoaded) return
+    localStorage.setItem("massImportItems", JSON.stringify(items))
+    localStorage.setItem("massImportInput", inputText)
+    localStorage.setItem("massImportLocation", globalLocation)
+    localStorage.setItem("massImportAutoStart", isProcessing ? "true" : "false")
+  }, [items, inputText, globalLocation, isProcessing, isLoaded])
+
+  // Abort ongoing requests on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
 
   const processQueue = async () => {
     if (isProcessing) return
@@ -363,7 +425,11 @@ export default function MassImportPage() {
                   Alle hinzufügen
                 </button>
                <button
-                  onClick={() => setItems([])}
+                  onClick={() => {
+                    setItems([])
+                    localStorage.removeItem("massImportItems")
+                    localStorage.removeItem("massImportAutoStart")
+                  }}
                   className="flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   <Trash2 className="h-4 w-4" />

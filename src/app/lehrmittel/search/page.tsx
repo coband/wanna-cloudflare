@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 interface SearchSource {
@@ -20,6 +20,32 @@ export default function LehrmittelSearchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load state from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedQuery = localStorage.getItem('lehrmittelSearchQuery');
+      const savedResult = localStorage.getItem('lehrmittelSearchResult');
+
+      if (savedQuery) setQuery(savedQuery);
+      if (savedResult) setResult(JSON.parse(savedResult));
+    } catch (e) {
+      console.error("Failed to load search state", e);
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('lehrmittelSearchQuery', query);
+    if (result) {
+      localStorage.setItem('lehrmittelSearchResult', JSON.stringify(result));
+    } else {
+      localStorage.removeItem('lehrmittelSearchResult');
+    }
+  }, [query, result, isLoaded]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();

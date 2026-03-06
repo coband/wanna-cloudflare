@@ -64,18 +64,26 @@ export async function createBook(
   try {
     const supabase = createClerkSupabaseClient(session);
     const sessionUserId = session?.user?.id ?? null;
-    const cleanIsbn = input.isbn.trim() || "Unbekannt";
+    const cleanIsbnInput = input.isbn?.trim() || "Unbekannt";
+    const normalizedIsbn = cleanIsbnInput === "Unbekannt"
+      ? "Unbekannt"
+      : cleanIsbnInput.replace(/[-\s]/g, "");
 
     // 1. Check if Book exists in Global Catalog
     let globalBookId: string | null = null;
 
     // Only check by ISBN if it's a valid ISBN (not "Unbekannt") to avoid merging unknown books
-    if (cleanIsbn !== "Unbekannt") {
-      const { data: existingBook } = await supabase
-        .from("global_books")
-        .select("id")
-        .eq("isbn", cleanIsbn)
-        .single();
+    if (normalizedIsbn !== "Unbekannt") {
+      let query = supabase.from("global_books").select("id");
+
+      if (normalizedIsbn !== cleanIsbnInput) {
+        // Check for both normalized and original input in DB (in case of old hyphenated entries)
+        query = query.or(`isbn.eq.${normalizedIsbn},isbn.eq.${cleanIsbnInput}`);
+      } else {
+        query = query.eq("isbn", normalizedIsbn);
+      }
+
+      const { data: existingBook } = await query.limit(1).maybeSingle();
 
       if (existingBook) {
         globalBookId = existingBook.id;
@@ -87,7 +95,7 @@ export async function createBook(
       const globalPayload = {
         title: input.title.trim(),
         author: input.author.trim(),
-        isbn: cleanIsbn === "Unbekannt" ? null : cleanIsbn, // Unique constraint handles NULLs gracefully (multiple nulls allowed) or we use UUID for unknown?
+        isbn: normalizedIsbn === "Unbekannt" ? null : normalizedIsbn, // Unique constraint handles NULLs gracefully
         // Postgres UNIQUE allows multiple NULLs.
         publisher: input.publisher.trim() || "Unbekannt",
         subject: input.subject.trim() || "Unbekannt",
@@ -109,7 +117,7 @@ export async function createBook(
           const { data: retryBook } = await supabase
             .from("global_books")
             .select("id")
-            .eq("isbn", cleanIsbn)
+            .eq("isbn", normalizedIsbn) // Retry with normalized ISBN
             .single();
           if (retryBook) globalBookId = retryBook.id;
         } else {
@@ -126,6 +134,22 @@ export async function createBook(
 
     if (!globalBookId) {
       return { success: false, error: "Konnte Buch-ID nicht auflösen." };
+    }
+
+    // 2.5. Check if already exists in organization inventory
+    const { data: existingInventory } = await supabase
+      .from("organization_inventory")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("global_book_id", globalBookId)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingInventory) {
+      return {
+        success: false,
+        error: "Dieses Buch existiert bereits in Ihrem Schulkatalog.",
+      };
     }
 
     // 3. Create Entry in Organization Inventory

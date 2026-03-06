@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library'
-import { X, Camera, Loader2 } from 'lucide-react'
+import { X } from 'lucide-react'
 
 interface BarcodeScannerModalProps {
   isOpen: boolean

@@ -1,16 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton, useUser, OrganizationSwitcher } from "@clerk/nextjs";
+import { UserButton, useUser, OrganizationSwitcher, useOrganization } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded } = useUser();
+  const { organization, isLoaded: isOrgLoaded } = useOrganization();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Track organization changes to force a hard refresh
+  const initialOrgId = useRef<string | undefined | null>(null);
+
+  useEffect(() => {
+    if (!isOrgLoaded) return;
+    
+    if (initialOrgId.current === null) {
+      initialOrgId.current = organization?.id || undefined;
+    } else if (initialOrgId.current !== (organization?.id || undefined)) {
+      // Organization changed, trigger hard refresh
+      window.location.reload();
+    }
+  }, [organization?.id, isOrgLoaded]);
 
   // Close mobile menu when pathname changes
   useEffect(() => {
